@@ -2,7 +2,7 @@
 
 An interactive reference tool for predicting corrosion intensity between dissimilar metals in exterior building assemblies.
 
-**[→ Live demo](https://YOUR-USERNAME.github.io/galvanic-compatibility/)**
+**[→ Live demo](https://cjcovell.github.io/galvanic-compatibility/)**
 
 ![Screenshot of the tool](screenshot.png)
 
@@ -34,7 +34,7 @@ Just visit the live demo link above.
 **Iframe embed**
 
 ```html
-<iframe src="https://YOUR-USERNAME.github.io/galvanic-compatibility/"
+<iframe src="https://cjcovell.github.io/galvanic-compatibility/"
         style="width:100%;border:0;height:1600px;"
         title="Galvanic compatibility"></iframe>
 ```
