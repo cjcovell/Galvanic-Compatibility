@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Galvanic compatibility — exterior building materials</title>
+<meta name="description" content="Interactive galvanic series for exterior building materials. Predict corrosion intensity between dissimilar metals across sheltered, standard, and coastal exposures.">
+
+<!--
+================================================================================
+  Galvanic compatibility — exterior building materials
+  Single-file portable interactive tool. v1.0
+
+  USAGE
+
+  1. Standalone: deploy this file to any web server and link to it.
+
+  2. Iframe embed:
+     <iframe src="galvanic-compatibility.html"
+             style="width:100%;border:0;height:1600px;"
+             title="Galvanic compatibility"></iframe>
+
+  3. Inline embed: copy the <main class="page">...</main>, the <style> block,
+     and the <script> block into your own page. Keep the Google Fonts <link>
+     tags or substitute your own typography.
+
+  4. Framework integration (React, Vue, etc.): the script has no dependencies
+     and uses a single state object. Lift state into your framework, port the
+     update() and renderScale() functions, and replace innerHTML with JSX or
+     templates as needed.
+
+  URL PARAMETERS (for sharing a specific scenario):
+     ?a=aluminum&b=stainless&env=coastal
+
+  Metal IDs:  zinc, aluminum, mild-steel, weather-steel, lead, brass,
+              copper, bronze, stainless, titanium
+  Env IDs:    sheltered, standard, coastal
+================================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Manrope:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  /* Paper + ink */
+  --bg: #F2EDE2;
+  --bg-card: #FBF7EE;
+  --bg-card-strong: #FFFFFF;
+  --ink: #1A1612;
+  --ink-2: #5C5249;
+  --ink-3: #8B8276;
+  --rule: #D9D2C2;
+  --rule-soft: #E8E2D2;
+
+  /* Severity — pulled from metal oxide tones */
+  --c-compat:    #3F6E3F;   --c-compat-bg:    #DEE9D7;   /* moss / verdigris */
+  --c-mild:      #A87A26;   --c-mild-bg:      #F2E2BB;   /* brass */
+  --c-moderate:  #A14A22;   --c-moderate-bg:  #F2D5BD;   /* oxidized copper */
+  --c-severe:    #8E2A1D;   --c-severe-bg:    #ECC9C2;   /* iron rust */
+
+  /* Type */
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-body:    'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Layout */
+  --container: 940px;
+  --r: 4px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: var(--bg); color: var(--ink); }
+
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  padding: clamp(1.5rem, 5vw, 4rem) clamp(1rem, 4vw, 3rem) clamp(2rem, 4vw, 3rem);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(26,22,18,0.025) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.page { max-width: var(--container); margin: 0 auto; }
+
+/* ── Page head ───────────────────────────────────────────────── */
+
+.head-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+.head-meta .ref { display: flex; gap: 0.75rem; align-items: baseline; }
+.head-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-severe); display: inline-block; transform: translateY(-1px); }
+
+h1.title {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-weight: 400;
+  font-size: clamp(2.75rem, 8vw, 5rem);
+  line-height: 0.95;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.7rem;
+}
+.subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: "opsz" 24;
+  font-weight: 400;
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  color: var(--ink-2);
+  max-width: 54ch;
+  line-height: 1.5;
+}
+
+hr.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 2.5rem 0 2rem;
+}
+
+/* ── Form bits ───────────────────────────────────────────────── */
+
+.lbl {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.55rem;
+  font-weight: 500;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 0.95rem;
+  background: var(--bg-card-strong);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 0.7rem 2.25rem 0.7rem 0.9rem;
+  color: var(--ink);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%238B8276' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+select:hover { border-color: var(--ink-2); }
+select:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(26,22,18,0.08);
+}
+
+/* Env button group */
+.env { margin-bottom: 1rem; }
+.env-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
+.env-btns button {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  background: var(--bg-card-strong);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: border-color 0.15s, background 0.2s, color 0.2s;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.env-btns button .sub {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.env-btns button:hover { border-color: var(--ink-2); }
+.env-btns button:focus-visible {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(26,22,18,0.08);
+}
+.env-btns button.selected {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.env-btns button.selected .sub {
+  color: var(--bg);
+  opacity: 0.7;
+}
+
+/* ── Result block ────────────────────────────────────────────── */
+
+.result {
+  text-align: center;
+  padding: 2.5rem 1rem 2.25rem;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  margin: 2rem 0 2.5rem;
+  position: relative;
+}
+.result::before, .result::after {
+  content: '';
+  position: absolute;
+  width: 8px; height: 8px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  top: -5px;
+}
+.result::before { left: -5px; }
+.result::after  { right: -5px; }
+
+.result-pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.9rem;
+  border-radius: 100px;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+.result-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-size: clamp(4.5rem, 13vw, 7rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  margin-bottom: 0.6rem;
+  font-feature-settings: "tnum";
+}
+.result-num .unit {
+  font-family: var(--font-mono);
+  font-size: 0.2em;
+  font-weight: 400;
+  color: var(--ink-3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-left: 0.5em;
+  vertical-align: 0.55em;
+}
+.result-desc {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: "opsz" 24;
+  font-size: 1.1rem;
+  color: var(--ink-2);
+  max-width: 52ch;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+/* ── Main analysis grid ──────────────────────────────────────── */
+
+.main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.scale-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 1rem 0.5rem;
+  position: sticky;
+  top: 1rem;
+}
+.scale-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.info { display: flex; flex-direction: column; }
+
+.info-card {
+  border-top: 1px solid var(--rule-soft);
+  padding: 1.6rem 0;
+}
+.info-card:first-child { border-top: 0; padding-top: 0; }
+.info-card:last-child { padding-bottom: 0; }
+
+.card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+.card-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.1em;
+  font-feature-settings: "tnum";
+  font-weight: 500;
+}
+.card-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.info-card h3 {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 100;
+  font-weight: 500;
+  font-size: 1.7rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.3rem;
+  line-height: 1.2;
+}
+.metal-pot {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--ink-3);
+  margin-bottom: 0.85rem;
+  font-feature-settings: "tnum";
+}
+.info-card p {
+  font-size: 0.95rem;
+  color: var(--ink-2);
+  line-height: 1.65;
+  max-width: 62ch;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+
+.foot {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+.foot p { max-width: 65ch; }
+.foot .version { white-space: nowrap; }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  body { padding: 1.5rem 1rem 2rem; }
+  .controls { grid-template-columns: 1fr; }
+  .env-btns { grid-template-columns: 1fr; }
+  .main {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .scale-wrap {
+    position: static;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+  .head-meta { font-size: 10px; }
+}
+
+/* ── Print ───────────────────────────────────────────────────── */
+
+@media print {
+  body { background: white; padding: 0; background-image: none; }
+  .env-btns button:not(.selected) { display: none; }
+  .scale-wrap { position: static; break-inside: avoid; border-color: #ccc; }
+  .info-card { break-inside: avoid; }
+  .result::before, .result::after { display: none; }
+}
+
+/* ── Entry animation ─────────────────────────────────────────── */
+
+.page > * {
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+.page > *:nth-child(1) { animation-delay: 0.05s; }
+.page > *:nth-child(2) { animation-delay: 0.12s; }
+.page > *:nth-child(3) { animation-delay: 0.20s; }
+.page > *:nth-child(4) { animation-delay: 0.28s; }
+.page > *:nth-child(5) { animation-delay: 0.36s; }
+.page > *:nth-child(6) { animation-delay: 0.44s; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page > * { animation: none; }
+  * { transition: none !important; }
+}
+
+/* Smooth value transitions on update */
+.result-pill, .info-card h3, .card-tag {
+  transition: color 0.25s ease, background-color 0.25s ease;
+}
+</style>
+
+</head>
+<body>
+<main class="page">
+
+  <div class="head-meta">
+    <span class="ref"><span class="dot"></span>Reference / building envelope</span>
+    <span class="ref-num">No. 01</span>
+  </div>
+
+  <h1 class="title">Galvanic compatibility</h1>
+  <p class="subtitle">Predicting corrosion intensity between dissimilar metals in exterior building assemblies.</p>
+
+  <hr class="rule">
+
+  <section class="tool" aria-label="Galvanic compatibility tool">
+
+```
+<div class="controls">
+  <div>
+    <label class="lbl" for="metal1">Metal A</label>
+    <select id="metal1"></select>
+  </div>
+  <div>
+    <label class="lbl" for="metal2">Metal B</label>
+    <select id="metal2"></select>
+  </div>
+</div>
+
+<div class="env">
+  <span class="lbl">Exposure environment</span>
+  <div class="env-btns" role="radiogroup" aria-label="Exposure environment">
+    <button data-env="sheltered" type="button">Sheltered<span class="sub">soffits, cavities</span></button>
+    <button data-env="standard"  type="button" class="selected">Standard<span class="sub">inland rain</span></button>
+    <button data-env="coastal"   type="button">Coastal<span class="sub">salt air</span></button>
+  </div>
+</div>
+
+<div class="result" id="result" aria-live="polite"></div>
+
+<div class="main">
+  <div class="scale-wrap" aria-label="Galvanic series scale">
+    <svg id="scale" viewBox="0 0 300 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vertical galvanic series of exterior building metals"></svg>
+  </div>
+  <div class="info" id="info"></div>
+</div>
+```
+
+  </section>
+
+  <hr class="rule" style="margin-top: 3rem;">
+
+  <footer class="foot">
+    <p>Potentials referenced to the saturated calomel electrode in flowing seawater. Severity thresholds adjust for the selected exterior exposure. This tool screens compatibility for design — it does not replace project-specific corrosion engineering.</p>
+    <span class="version">v1.0</span>
+  </footer>
+
+</main>
+
+<script>
+(function() {
+  'use strict';
+
+  const metals = [
+    { id: 'magnesium',     name: 'Magnesium',         potential: -1.60 },
+    { id: 'zinc',          name: 'Zinc / galvanized', potential: -1.05 },
+    { id: 'aluminum',      name: 'Aluminum',          potential: -0.90 },
+    { id: 'mild-steel',    name: 'Mild steel',        potential: -0.68 },
+    { id: 'weather-steel', name: 'Weathering steel',  potential: -0.62 },
+    { id: 'lead',          name: 'Lead',              potential: -0.52 },
+    { id: 'brass',         name: 'Brass',             potential: -0.34 },
+    { id: 'copper',        name: 'Copper',            potential: -0.28 },
+    { id: 'bronze',        name: 'Bronze',            potential: -0.22 },
+    { id: 'stainless',     name: 'Stainless steel',   potential: -0.05 },
+    { id: 'titanium',      name: 'Titanium',          potential:  0.05 }
+  ];
+
+  const ENVIRONMENTS = {
+    sheltered: { mult: 2.0, phrase: 'in sheltered exposure' },
+    standard:  { mult: 1.0, phrase: 'in standard rain exposure' },
+    coastal:   { mult: 0.5, phrase: 'in coastal exposure' }
+  };
+
+  const BASE = [0.15, 0.30, 0.50];
+
+  const SEVERITIES = [
+    { label: 'Compatible', token: 'compat'   },
+    { label: 'Mild',       token: 'mild'     },
+    { label: 'Moderate',   token: 'moderate' },
+    { label: 'Severe',     token: 'severe'   }
+  ];
+
+  function descFor(sevIdx, envKey) {
+    const p = ENVIRONMENTS[envKey].phrase;
+    if (sevIdx === 0) return 'Negligible galvanic activity ' + p + '. Safe for direct contact in typical detailing.';
+    if (sevIdx === 1) return envKey === 'coastal'
+      ? 'Slow staining and pitting are likely over years of salt exposure. Watch joints that stay wet.'
+      : 'Limited corrosion ' + p + '. Standard joint detailing handles it.';
+    if (sevIdx === 2) return 'Notable corrosion of the more active metal whenever the joint stays wet ' + p + '. Detail to drain and isolate.';
+    return envKey === 'coastal'
+      ? 'Aggressive corrosion. This pairing should be avoided or fully isolated for any coastal application.'
+      : 'Aggressive galvanic corrosion ' + p + '. Isolate fully or substitute one of the metals.';
+  }
+
+  function detailingText(sevIdx, envKey, anode) {
+    if (sevIdx === 0) return 'Standard installation is fine. No special precautions required for this combination.';
+    if (sevIdx === 1) return envKey === 'coastal'
+      ? 'Use EPDM or butyl gaskets at fastener heads. Caulk laps and seal terminations to limit dwell time of salt spray.'
+      : 'Use EPDM or butyl gaskets at fastener heads. Detail joints to shed water rather than pool it.';
+    if (sevIdx === 2) {
+      const sizeRule = ' Keep the anode (' + anode.name.toLowerCase() + ') the larger surface — a small anode against a large cathode concentrates the attack and fails fast.';
+      return 'Isolate with neoprene, EPDM, or butyl tape between the metals. Use coated fasteners or fasteners matched to the more noble metal. Slope every joint to drain.' + sizeRule;
+    }
+    const sizeRule = ' Critical: never let the more active metal (' + anode.name.toLowerCase() + ') be the smaller piece. A small anode against a large cathode corrodes through within a few wet seasons.';
+    if (envKey === 'coastal') return 'Avoid direct contact entirely. Use full dielectric separators (EPDM, butyl tape, plastic isolators), specify 316 stainless fasteners, and prefer powder-coated or PVDF-finished substrates.' + sizeRule;
+    return 'Avoid direct contact. Use dielectric separators (EPDM, butyl tape, plastic isolators) at every contact point. Substitute one metal where the design allows.' + sizeRule;
+  }
+
+  function severityIndex(diff, envKey) {
+    const a = Math.abs(diff);
+    const m = ENVIRONMENTS[envKey].mult;
+    const t = BASE.map(x => x * m);
+    if (a < t[0]) return 0;
+    if (a < t[1]) return 1;
+    if (a < t[2]) return 2;
+    return 3;
+  }
+
+  function fmtV(p) { return (p >= 0 ? '+' : '') + p.toFixed(2); }
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  /* DOM */
+  const m1Sel    = document.getElementById('metal1');
+  const m2Sel    = document.getElementById('metal2');
+  const resEl    = document.getElementById('result');
+  const infoEl   = document.getElementById('info');
+  const scaleSvg = document.getElementById('scale');
+
+  metals.forEach((m, i) => {
+    const v = fmtV(m.potential);
+    m1Sel.add(new Option(m.name + ' (' + v + ' V)', i));
+    m2Sel.add(new Option(m.name + ' (' + v + ' V)', i));
+  });
+
+  /* State */
+  const state = { a: 2, b: 9, env: 'standard' };
+
+  /* URL params */
+  function readUrl() {
+    try {
+      const p = new URLSearchParams(location.search);
+      const aId = p.get('a'), bId = p.get('b'), env = p.get('env');
+      if (aId) { const i = metals.findIndex(m => m.id === aId); if (i >= 0) state.a = i; }
+      if (bId) { const i = metals.findIndex(m => m.id === bId); if (i >= 0) state.b = i; }
+      if (env && ENVIRONMENTS[env]) state.env = env;
+    } catch (e) { /* same as writeUrl: ignore in sandboxed contexts */ }
+  }
+  function writeUrl() {
+    try {
+      const p = new URLSearchParams();
+      p.set('a', metals[state.a].id);
+      p.set('b', metals[state.b].id);
+      p.set('env', state.env);
+      history.replaceState(null, '', '?' + p.toString());
+    } catch (e) {
+      /* Sandboxed iframes and some file:// contexts disallow history manipulation.
+         Deep-linking won't work there, but the tool still functions normally. */
+    }
+  }
+
+  readUrl();
+  m1Sel.value = state.a;
+  m2Sel.value = state.b;
+  document.querySelectorAll('.env-btns button').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.env === state.env);
+  });
+
+  /* Scale */
+  const POT_MIN = -1.70, POT_MAX = 0.15;
+  const SCALE_TOP = 56, SCALE_BOTTOM = 544;
+  const yFor = p => SCALE_TOP + ((p - POT_MIN) / (POT_MAX - POT_MIN)) * (SCALE_BOTTOM - SCALE_TOP);
+
+  function renderScale() {
+    const m1 = metals[state.a], m2 = metals[state.b];
+    const sev = SEVERITIES[severityIndex(m1.potential - m2.potential, state.env)];
+    const sevC  = 'var(--c-' + sev.token + ')';
+    const sevBg = 'var(--c-' + sev.token + '-bg)';
+
+    const headStyle = 'font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:1.4px;text-transform:uppercase;fill:var(--ink);';
+    const subStyle  = 'font-family:var(--font-mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;fill:var(--ink-3);';
+
+    let g = '';
+    g += '<text x="120" y="22"  text-anchor="middle" style="' + headStyle + '">Active</text>';
+    g += '<text x="120" y="38"  text-anchor="middle" style="' + subStyle  + '">corrodes</text>';
+    g += '<text x="120" y="568" text-anchor="middle" style="' + headStyle + '">Noble</text>';
+    g += '<text x="120" y="584" text-anchor="middle" style="' + subStyle  + '">protected</text>';
+
+    g += '<line x1="120" y1="44" x2="120" y2="556" style="stroke:var(--rule);stroke-width:1;"/>';
+    g += '<polygon points="115,47 125,47 120,40"   style="fill:var(--ink-3);"/>';
+    g += '<polygon points="115,553 125,553 120,560" style="fill:var(--ink-3);"/>';
+
+    metals.forEach((m, i) => {
+      const y = yFor(m.potential);
+      const sel = i === state.a || i === state.b;
+      const tickC  = sel ? sevC : 'var(--ink-3)';
+      const labelC = sel ? 'var(--ink)' : 'var(--ink-2)';
+      const w  = sel ? '500' : '400';
+      const sw = sel ? 2 : 1;
+      g += '<line x1="115" y1="' + y + '" x2="125" y2="' + y + '" style="stroke:' + tickC + ';stroke-width:' + sw + ';"/>';
+      g += '<text x="110" y="' + (y + 4) + '" text-anchor="end" style="font-family:var(--font-body);font-size:12px;font-weight:' + w + ';fill:' + labelC + ';">' + escapeHtml(m.name) + '</text>';
+      g += '<text x="130" y="' + (y + 4) + '" text-anchor="start" style="font-family:var(--font-mono);font-size:11px;fill:' + labelC + ';">' + fmtV(m.potential) + '</text>';
+    });
+
+    [m1, m2].forEach(m => {
+      const y = yFor(m.potential);
+      g += '<circle cx="120" cy="' + y + '" r="6" style="fill:' + sevC + ';stroke:var(--bg-card);stroke-width:2;"/>';
+    });
+
+    if (state.a !== state.b) {
+      const y1 = yFor(m1.potential), y2 = yFor(m2.potential);
+      const yt = Math.min(y1, y2), yb = Math.max(y1, y2);
+      const bx = 195;
+      g += '<line x1="' + bx + '" y1="' + yt + '" x2="' + bx + '" y2="' + yb + '" style="stroke:' + sevC + ';stroke-width:2;"/>';
+      g += '<line x1="' + (bx-4) + '" y1="' + yt + '" x2="' + (bx+4) + '" y2="' + yt + '" style="stroke:' + sevC + ';stroke-width:2;"/>';
+      g += '<line x1="' + (bx-4) + '" y1="' + yb + '" x2="' + (bx+4) + '" y2="' + yb + '" style="stroke:' + sevC + ';stroke-width:2;"/>';
+      const ym = (yt + yb) / 2;
+      const dmv = Math.round(Math.abs(m1.potential - m2.potential) * 1000);
+      g += '<rect x="' + (bx+8) + '" y="' + (ym-12) + '" width="68" height="24" rx="3" style="fill:' + sevBg + ';"/>';
+      g += '<text x="' + (bx+42) + '" y="' + (ym+4) + '" text-anchor="middle" style="font-family:var(--font-mono);font-size:11px;font-weight:500;fill:' + sevC + ';">' + dmv + ' mV</text>';
+    }
+
+    scaleSvg.innerHTML = g;
+  }
+
+  /* Update */
+  function update() {
+    const m1 = metals[state.a], m2 = metals[state.b];
+
+    if (state.a === state.b) {
+      resEl.innerHTML = '<p style="font-family:var(--font-display);font-style:italic;font-size:1.15rem;color:var(--ink-2);max-width:48ch;margin:0 auto;">Same metal selected — no galvanic reaction.</p>';
+      infoEl.innerHTML = '<div class="info-card"><div class="card-meta"><span class="card-num">01</span><span class="card-tag" style="color:var(--ink-3);">Note</span></div><h3>Self-pairing</h3><p>Identical metals at a junction have no electrochemical potential difference, so no galvanic cell forms. Pick two different metals to see how they interact.</p></div>';
+      renderScale();
+      writeUrl();
+      return;
+    }
+
+    const diff   = Math.abs(m1.potential - m2.potential);
+    const sevIdx = severityIndex(diff, state.env);
+    const sev    = SEVERITIES[sevIdx];
+    const anode   = m1.potential < m2.potential ? m1 : m2;
+    const cathode = m1.potential < m2.potential ? m2 : m1;
+    const dmv = Math.round(diff * 1000);
+    const sevBg = 'var(--c-' + sev.token + '-bg)';
+    const sevC  = 'var(--c-' + sev.token + ')';
+
+    resEl.innerHTML =
+      '<span class="result-pill" style="background:' + sevBg + ';color:' + sevC + ';">' + sev.label + ' reaction</span>' +
+      '<div class="result-num" style="color:' + sevC + ';">' + dmv + '<span class="unit">mV</span></div>' +
+      '<p class="result-desc">' + descFor(sevIdx, state.env) + '</p>';
+
+    infoEl.innerHTML =
+      '<div class="info-card">' +
+        '<div class="card-meta"><span class="card-num">01</span><span class="card-tag" style="color:var(--c-severe);">Anode — corrodes</span></div>' +
+        '<h3>' + escapeHtml(anode.name) + '</h3>' +
+        '<div class="metal-pot">' + fmtV(anode.potential) + ' V vs. SCE</div>' +
+        '<p>The more active metal at this junction. It loses electrons and dissolves into rainwater or condensate, producing pitting, white salts, or rust streaks on the building face.</p>' +
+      '</div>' +
+      '<div class="info-card">' +
+        '<div class="card-meta"><span class="card-num">02</span><span class="card-tag" style="color:var(--c-compat);">Cathode — protected</span></div>' +
+        '<h3>' + escapeHtml(cathode.name) + '</h3>' +
+        '<div class="metal-pot">' + fmtV(cathode.potential) + ' V vs. SCE</div>' +
+        '<p>The more noble metal. It accepts electrons and stays intact — actually shielded from corrosion at the anode\u2019s expense, the way galvanizing protects the steel beneath it.</p>' +
+      '</div>' +
+      '<div class="info-card">' +
+        '<div class="card-meta"><span class="card-num">03</span><span class="card-tag" style="color:var(--ink-2);">Detailing</span></div>' +
+        '<h3>How to build the joint</h3>' +
+        '<p>' + detailingText(sevIdx, state.env, anode) + '</p>' +
+      '</div>';
+
+    renderScale();
+    writeUrl();
+  }
+
+  /* Events */
+  m1Sel.addEventListener('change', () => { state.a = parseInt(m1Sel.value); update(); });
+  m2Sel.addEventListener('change', () => { state.b = parseInt(m2Sel.value); update(); });
+  document.querySelectorAll('.env-btns button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.env = btn.dataset.env;
+      document.querySelectorAll('.env-btns button').forEach(b => b.classList.toggle('selected', b === btn));
+      update();
+    });
+  });
+
+  update();
+})();
+</script>
+
+</body>
+</html>
