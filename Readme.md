@@ -1,6 +1,6 @@
 # Galvanic compatibility
 
-An interactive reference tool for predicting corrosion intensity between dissimilar metals in exterior building assemblies.
+An interactive reference tool for predicting corrosion intensity between dissimilar metals in exterior building assemblies. The galvanic series is the hero: drag two markers along a full-bleed scale, watch electrons flow between them, and read the severity in real time.
 
 **[→ Live demo](https://cjcovell.github.io/galvanic-compatibility/)**
 
@@ -10,14 +10,16 @@ An interactive reference tool for predicting corrosion intensity between dissimi
 
 ## What it does
 
-Pick any two metals commonly used on building exteriors and the tool tells you:
+Pick any two of **17 metals** commonly used on building exteriors and the tool tells you:
 
 - The **potential difference** in millivolts between them
 - A **severity rating** (Compatible / Mild / Moderate / Severe) calibrated to the exposure environment
-- Which metal will **corrode** (anode) and which will be **protected** (cathode)
+- Which metal will **corrode** (anode) and which will be **protected** (cathode), with an animated electron-flow diagram whose density and speed encode severity
 - Specific **detailing guidance** — gaskets, isolators, fastener choices, the area-ratio rule
 
 The exposure selector — **Sheltered**, **Standard**, or **Coastal** — adjusts the severity thresholds, because the same potential difference behaves very differently in a ventilated soffit than it does 50 yards from the ocean.
+
+You can **save up to three scenarios** to a local tray and recall them with one click — useful for comparing two flashing options or sanity-checking a substitution against an approved baseline.
 
 ## Who it’s for
 
@@ -48,11 +50,23 @@ Append URL parameters to load a specific scenario:
 
 Useful for linking from a product page directly to a relevant compatibility check, or sharing a result with a colleague.
 
-Metal IDs: `magnesium`, `zinc`, `aluminum`, `mild-steel`, `weather-steel`, `lead`, `brass`, `copper`, `bronze`, `stainless`, `titanium`
+Metal IDs: `magnesium`, `zinc`, `galvalume`, `aluminum`, `mild-steel`, `weather-steel`, `terne`, `lead`, `lead-coated-copper`, `brass`, `copper`, `bronze`, `nickel`, `monel`, `stainless`, `stainless-316`, `titanium`
 Environment IDs: `sheltered`, `standard`, `coastal`
 
 **Inline integration**
 The whole tool is one HTML file — no build step, no JavaScript dependencies, no framework. Copy the `<main>`, `<style>`, and `<script>` blocks into your own page and it just works. CSS variables at the top of the stylesheet make rebranding trivial.
+
+## Tweaks panel
+
+The tool ships with a live tweaks panel for switching the visual presentation without touching code:
+
+- **Palette** — Paper (warm editorial), Dark Instrument, Blueprint
+- **Typography** — Editorial (Fraunces / Manrope), Modern (Instrument Serif / Inter), Technical (Manrope only)
+- **Density** — Compact, Standard, Spacious
+- **Scale orientation** — Horizontal (default) or Vertical
+- **Methodology footnotes** — Hide or Show
+
+To change the defaults for your fork, edit the `TWEAK_DEFAULTS` object inside the `<script>` block near the top — it’s wrapped in `/*EDITMODE-BEGIN*/.../*EDITMODE-END*/` markers and contains the five keys above.
 
 ## Methodology
 
@@ -75,12 +89,12 @@ For critical assemblies — coastal high-rises, marine structures, anything with
 ## Technical
 
 - **Single file**, no build system, no dependencies beyond Google Fonts
-- **~27 KB** uncompressed
-- **No data collection**, no tracking, no external API calls
-- **Responsive** down to mobile widths
+- **~78 KB** uncompressed
+- **No data collection**, no tracking, no external API calls — saved scenarios live in `localStorage` only
+- **Responsive** down to mobile widths (hero scale auto-flips vertical at narrow widths)
 - **Print stylesheet** included — outputs cleanly for spec packages
-- **Keyboard accessible** with `aria-live` on the result region
-- **Respects** `prefers-reduced-motion`
+- **Keyboard accessible** — drag markers with ← / → / Home / End, click any metal label to recall it, `aria-live` on the result region
+- **Respects** `prefers-reduced-motion` — disables electron flow and entry animations
 
 ## License
 

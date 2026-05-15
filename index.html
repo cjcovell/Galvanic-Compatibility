@@ -1,79 +1,165 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Galvanic compatibility — exterior building materials</title>
-<meta name="description" content="Interactive galvanic series for exterior building materials. Predict corrosion intensity between dissimilar metals across sheltered, standard, and coastal exposures.">
-
-<!--
-================================================================================
-  Galvanic compatibility — exterior building materials
-  Single-file portable interactive tool. v1.0
-
-  USAGE
-
-  1. Standalone: deploy this file to any web server and link to it.
-
-  2. Iframe embed:
-     <iframe src="galvanic-compatibility.html"
-             style="width:100%;border:0;height:1600px;"
-             title="Galvanic compatibility"></iframe>
-
-  3. Inline embed: copy the <main class="page">...</main>, the <style> block,
-     and the <script> block into your own page. Keep the Google Fonts <link>
-     tags or substitute your own typography.
-
-  4. Framework integration (React, Vue, etc.): the script has no dependencies
-     and uses a single state object. Lift state into your framework, port the
-     update() and renderScale() functions, and replace innerHTML with JSX or
-     templates as needed.
-
-  URL PARAMETERS (for sharing a specific scenario):
-     ?a=aluminum&b=stainless&env=coastal
-
-  Metal IDs:  zinc, aluminum, mild-steel, weather-steel, lead, brass,
-              copper, bronze, stainless, titanium
-  Env IDs:    sheltered, standard, coastal
-================================================================================
--->
+<meta name="description" content="Interactive galvanic series for exterior building materials. Drag two metals along the scale to predict corrosion intensity across sheltered, standard, and coastal exposures.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Manrope:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  /* Paper + ink */
-  --bg: #F2EDE2;
-  --bg-card: #FBF7EE;
-  --bg-card-strong: #FFFFFF;
-  --ink: #1A1612;
-  --ink-2: #5C5249;
-  --ink-3: #8B8276;
-  --rule: #D9D2C2;
-  --rule-soft: #E8E2D2;
+/* ──────────────────────────────────────────────────────────────
+   PALETTES — three editorial moods, each a complete token set.
+   Swap via [data-palette] on <html>.
+   ────────────────────────────────────────────────────────────── */
 
-  /* Severity — pulled from metal oxide tones */
-  --c-compat:    #3F6E3F;   --c-compat-bg:    #DEE9D7;   /* moss / verdigris */
-  --c-mild:      #A87A26;   --c-mild-bg:      #F2E2BB;   /* brass */
-  --c-moderate:  #A14A22;   --c-moderate-bg:  #F2D5BD;   /* oxidized copper */
-  --c-severe:    #8E2A1D;   --c-severe-bg:    #ECC9C2;   /* iron rust */
+:root,
+html[data-palette="paper"] {
+  --bg:            #F2EDE2;
+  --bg-card:       #FBF7EE;
+  --bg-card-soft:  #F7F1E3;
+  --bg-card-strong:#FFFFFF;
+  --ink:           #1A1612;
+  --ink-2:         #5C5249;
+  --ink-3:         #8B8276;
+  --ink-4:         #B2A998;
+  --rule:          #D9D2C2;
+  --rule-soft:     #E8E2D2;
+  --grid-dot:      rgba(26,22,18,0.025);
 
-  /* Type */
+  --c-compat:    #3F6E3F;  --c-compat-bg:    #DEE9D7;
+  --c-mild:      #A87A26;  --c-mild-bg:      #F2E2BB;
+  --c-moderate:  #A14A22;  --c-moderate-bg:  #F2D5BD;
+  --c-severe:    #8E2A1D;  --c-severe-bg:    #ECC9C2;
+
+  --shadow-card: 0 1px 0 rgba(26,22,18,0.04), 0 8px 24px -16px rgba(26,22,18,0.18);
+  --shadow-pop:  0 1px 0 rgba(26,22,18,0.05), 0 20px 50px -24px rgba(26,22,18,0.32);
+}
+
+html[data-palette="dark"] {
+  --bg:            #14110D;
+  --bg-card:       #1C1814;
+  --bg-card-soft:  #221D17;
+  --bg-card-strong:#28221B;
+  --ink:           #F4EEDF;
+  --ink-2:         #C6BCA7;
+  --ink-3:         #8B8273;
+  --ink-4:         #5E574B;
+  --rule:          #322B22;
+  --rule-soft:     #28221B;
+  --grid-dot:      rgba(244,238,223,0.035);
+
+  --c-compat:    #7CBF7C;  --c-compat-bg:    #1F3320;
+  --c-mild:      #E0B260;  --c-mild-bg:      #3A2E15;
+  --c-moderate:  #E58A57;  --c-moderate-bg:  #3A2014;
+  --c-severe:    #E66A5A;  --c-severe-bg:    #3A1612;
+
+  --shadow-card: 0 1px 0 rgba(0,0,0,0.4), 0 14px 40px -20px rgba(0,0,0,0.7);
+  --shadow-pop:  0 2px 0 rgba(0,0,0,0.5), 0 28px 60px -28px rgba(0,0,0,0.8);
+}
+
+html[data-palette="blueprint"] {
+  --bg:            #0E2748;
+  --bg-card:       #143058;
+  --bg-card-soft:  #16365F;
+  --bg-card-strong:#1A3D6B;
+  --ink:           #F0F5FA;
+  --ink-2:         #A8C2DD;
+  --ink-3:         #6E8FB3;
+  --ink-4:         #4A6788;
+  --rule:          #2A4A78;
+  --rule-soft:     #1F3E68;
+  --grid-dot:      rgba(240,245,250,0.06);
+
+  --c-compat:    #8FD6A8;  --c-compat-bg:    #1B3F3A;
+  --c-mild:      #F0CB6C;  --c-mild-bg:      #3F3416;
+  --c-moderate:  #F0996C;  --c-moderate-bg:  #3F2418;
+  --c-severe:    #F07466;  --c-severe-bg:    #3F1A18;
+
+  --shadow-card: 0 1px 0 rgba(0,0,0,0.25), 0 16px 36px -22px rgba(0,0,0,0.55);
+  --shadow-pop:  0 2px 0 rgba(0,0,0,0.4), 0 28px 60px -30px rgba(0,0,0,0.65);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   TYPE PAIRINGS
+   ────────────────────────────────────────────────────────────── */
+
+:root,
+html[data-type="editorial"] {
   --font-display: 'Fraunces', ui-serif, Georgia, serif;
   --font-body:    'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-
-  /* Layout */
-  --container: 940px;
-  --r: 4px;
+  --display-feat: "opsz" 144;
+  --display-weight: 400;
+  --display-tracking: -0.025em;
 }
+
+html[data-type="modern"] {
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+  --font-body:    'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  --display-feat: normal;
+  --display-weight: 400;
+  --display-tracking: -0.02em;
+}
+
+html[data-type="technical"] {
+  --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-body:    'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  --display-feat: normal;
+  --display-weight: 700;
+  --display-tracking: -0.035em;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   DENSITY
+   ────────────────────────────────────────────────────────────── */
+
+:root,
+html[data-density="standard"] {
+  --pad-page-y: clamp(2rem, 5vw, 4rem);
+  --pad-page-x: clamp(1.25rem, 4vw, 3rem);
+  --gap-section: 2.5rem;
+  --pad-card: 1.6rem 0;
+  --container: 1180px;
+  --scale-stage-h: 220px;
+  --result-num: clamp(4rem, 12vw, 6.5rem);
+  --title-size: clamp(2.5rem, 7vw, 4.5rem);
+}
+
+html[data-density="compact"] {
+  --pad-page-y: clamp(1.25rem, 3vw, 2.25rem);
+  --pad-page-x: clamp(1rem, 3vw, 2rem);
+  --gap-section: 1.5rem;
+  --pad-card: 1.1rem 0;
+  --container: 1080px;
+  --scale-stage-h: 160px;
+  --result-num: clamp(3rem, 8vw, 4.75rem);
+  --title-size: clamp(2rem, 5vw, 3.25rem);
+}
+
+html[data-density="spacious"] {
+  --pad-page-y: clamp(3rem, 7vw, 5.5rem);
+  --pad-page-x: clamp(1.5rem, 5vw, 4rem);
+  --gap-section: 3.5rem;
+  --pad-card: 2.2rem 0;
+  --container: 1240px;
+  --scale-stage-h: 280px;
+  --result-num: clamp(5rem, 14vw, 8rem);
+  --title-size: clamp(3rem, 8vw, 5.5rem);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   BASE
+   ────────────────────────────────────────────────────────────── */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { background: var(--bg); color: var(--ink); }
+html, body { background: var(--bg); color: var(--ink); }
 
 body {
   font-family: var(--font-body);
@@ -82,10 +168,11 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100vh;
-  padding: clamp(1.5rem, 5vw, 4rem) clamp(1rem, 4vw, 3rem) clamp(2rem, 4vw, 3rem);
-  background-image:
-    radial-gradient(circle at 1px 1px, rgba(26,22,18,0.025) 1px, transparent 0);
+  padding: var(--pad-page-y) var(--pad-page-x);
+  background-image: radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 0);
   background-size: 24px 24px;
+  transition: background 0.4s, color 0.4s;
+  overflow-x: hidden;
 }
 
 .page { max-width: var(--container); margin: 0 auto; }
@@ -101,39 +188,59 @@ body {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   font-weight: 500;
 }
-.head-meta .ref { display: flex; gap: 0.75rem; align-items: baseline; }
-.head-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-severe); display: inline-block; transform: translateY(-1px); }
+.head-meta .ref { display: flex; gap: 0.65rem; align-items: baseline; }
+.head-meta .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--c-severe);
+  display: inline-block;
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px var(--c-severe-bg);
+}
 
 h1.title {
   font-family: var(--font-display);
-  font-variation-settings: "opsz" 144;
-  font-weight: 400;
-  font-size: clamp(2.75rem, 8vw, 5rem);
-  line-height: 0.95;
-  letter-spacing: -0.025em;
-  margin-bottom: 0.7rem;
+  font-variation-settings: var(--display-feat);
+  font-weight: var(--display-weight);
+  font-size: var(--title-size);
+  line-height: 0.92;
+  letter-spacing: var(--display-tracking);
+  margin-bottom: 0.6rem;
+  max-width: 16ch;
 }
 .subtitle {
   font-family: var(--font-display);
   font-style: italic;
   font-variation-settings: "opsz" 24;
   font-weight: 400;
-  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
   color: var(--ink-2);
-  max-width: 54ch;
+  max-width: 56ch;
   line-height: 1.5;
 }
-
-hr.rule {
-  border: 0;
-  border-top: 1px solid var(--rule);
-  margin: 2.5rem 0 2rem;
+html[data-type="modern"] .subtitle  { font-family: var(--font-display); }
+html[data-type="technical"] .subtitle {
+  font-family: var(--font-body);
+  font-style: normal;
+  font-weight: 400;
 }
 
-/* ── Form bits ───────────────────────────────────────────────── */
+hr.rule { border: 0; border-top: 1px solid var(--rule); margin: var(--gap-section) 0; }
+
+/* ── Top bar ─────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+.topbar-right { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
 .lbl {
   display: block;
@@ -142,188 +249,584 @@ hr.rule {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 0.55rem;
   font-weight: 500;
 }
 
-.controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-select {
-  width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
-  font: inherit;
-  font-size: 0.95rem;
-  background: var(--bg-card-strong);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
-  padding: 0.7rem 2.25rem 0.7rem 0.9rem;
-  color: var(--ink);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%238B8276' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 0.9rem center;
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-select:hover { border-color: var(--ink-2); }
-select:focus {
-  outline: none;
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px rgba(26,22,18,0.08);
-}
-
-/* Env button group */
-.env { margin-bottom: 1rem; }
+/* env segmented control */
 .env-btns {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.5rem;
+  display: inline-flex;
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 3px;
 }
 .env-btns button {
   font-family: var(--font-body);
-  font-size: 0.875rem;
-  background: var(--bg-card-strong);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
-  padding: 0.7rem 0.9rem;
-  text-align: left;
-  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem 0.45rem 0.8rem;
+  color: var(--ink-2);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  transition: border-color 0.15s, background 0.2s, color 0.2s;
-  font-weight: 500;
-  line-height: 1.3;
+  gap: 0.5rem;
+  align-items: center;
+  line-height: 1;
+  transition: background 0.2s, color 0.2s;
 }
-.env-btns button .sub {
-  font-size: 0.75rem;
-  color: var(--ink-3);
-  font-weight: 400;
+.env-btns button .env-glyph {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--ink-4);
+  position: relative;
+  flex-shrink: 0;
 }
-.env-btns button:hover { border-color: var(--ink-2); }
-.env-btns button:focus-visible {
-  outline: none;
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px rgba(26,22,18,0.08);
+.env-btns button[data-env="sheltered"] .env-glyph {
+  background: var(--ink-4);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
 }
+.env-btns button[data-env="standard"] .env-glyph {
+  background: radial-gradient(circle at 50% 30%, var(--ink-4) 50%, transparent 51%),
+              linear-gradient(var(--ink-4), var(--ink-4)) bottom/100% 35% no-repeat;
+  background-color: transparent;
+}
+.env-btns button[data-env="coastal"] .env-glyph {
+  background: repeating-linear-gradient(135deg, var(--ink-4) 0 2px, transparent 2px 5px);
+}
+.env-btns button:hover { color: var(--ink); }
 .env-btns button.selected {
   background: var(--ink);
   color: var(--bg);
-  border-color: var(--ink);
 }
-.env-btns button.selected .sub {
-  color: var(--bg);
-  opacity: 0.7;
-}
+.env-btns button.selected .env-glyph { filter: invert(1) brightness(2); }
 
-/* ── Result block ────────────────────────────────────────────── */
-
-.result {
-  text-align: center;
-  padding: 2.5rem 1rem 2.25rem;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-  margin: 2rem 0 2.5rem;
-  position: relative;
-}
-.result::before, .result::after {
-  content: '';
-  position: absolute;
-  width: 8px; height: 8px;
-  background: var(--bg);
+/* generic icon button */
+.icon-btn {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: var(--bg-card);
   border: 1px solid var(--rule);
-  border-radius: 50%;
-  top: -5px;
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  line-height: 1;
+  transition: background 0.2s, border-color 0.15s, transform 0.15s;
 }
-.result::before { left: -5px; }
-.result::after  { right: -5px; }
-
-.result-pill {
-  display: inline-block;
+.icon-btn:hover { border-color: var(--ink-3); }
+.icon-btn:active { transform: scale(0.97); }
+.icon-btn .glyph {
+  display: inline-flex;
+  width: 14px;
+  justify-content: center;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── HERO SCALE STAGE ────────────────────────────────────────── */
+
+.stage {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1.75rem 1.5rem 1.5rem;
+  margin: 0.5rem 0 1.5rem;
+  position: relative;
+  box-shadow: var(--shadow-card);
+  transition: background 0.4s, border-color 0.3s;
+}
+
+.stage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.stage-head .l { color: var(--ink); font-weight: 600; letter-spacing: 0.14em; }
+.stage-head .r { color: var(--ink-3); }
+
+/* The horizontal scale */
+.scale-h {
+  position: relative;
+  height: var(--scale-stage-h);
+  width: 100%;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+.scale-h .axis {
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 2px;
+  background: var(--rule);
+  transform: translateY(-50%);
+}
+.scale-h .axis-fill {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  background: var(--ink);
+  transform: translateY(-50%);
+  transition: left 0.18s cubic-bezier(.4,.0,.2,1), width 0.18s cubic-bezier(.4,.0,.2,1), background 0.3s;
+}
+.scale-h .axis-cap {
+  position: absolute;
+  top: 50%;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--bg-card);
+  transform: translate(-50%, -50%);
+  transition: background 0.3s;
+}
+.scale-h .axis-cap.l { left: 0; }
+.scale-h .axis-cap.r { left: 100%; }
+
+.scale-h .endcap {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  padding: 0.35rem 0.9rem;
-  border-radius: 100px;
-  margin-bottom: 1rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--bg-card);
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.scale-h .endcap.l { left: 0;     top: 0; transform: none; }
+.scale-h .endcap.r { right: 0; left: auto; top: 0; transform: none; }
+.scale-h .endcap .lo {
+  display: block;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--ink-3);
+  margin-top: 2px;
+  letter-spacing: 0.12em;
+}
+
+/* metal ticks */
+.tick {
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 14px;
+  background: var(--ink-4);
+  transform: translate(-50%, -50%);
+  transition: height 0.15s, background 0.2s;
+  pointer-events: none;
+}
+.tick.major { height: 22px; background: var(--ink-3); }
+
+.tick-label {
+  position: absolute;
+  top: calc(50% + 28px);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transform: translateX(-50%) rotate(-50deg);
+  transform-origin: 50% 0%;
+  cursor: pointer;
   font-weight: 500;
+  transition: color 0.2s, font-weight 0.15s;
+}
+.tick-label:hover { color: var(--ink); }
+.tick-label.active { color: var(--ink); font-weight: 600; }
+
+/* draggable markers */
+.marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  cursor: grab;
+  touch-action: none;
+  transition: transform 0.22s cubic-bezier(.4,1.6,.5,1), filter 0.2s;
+}
+.marker.dragging { cursor: grabbing; transition: none; z-index: 10; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.18)); }
+.marker:focus { outline: none; }
+.marker:focus-visible .marker-chip { box-shadow: 0 0 0 3px var(--c-mild-bg), 0 0 0 4px var(--c-mild); }
+
+.marker-stem {
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  background: currentColor;
+  transform: translateX(-50%);
+  transition: background 0.3s;
+}
+.marker.a .marker-stem { bottom: 50%; height: 38px; }
+.marker.b .marker-stem { top: 50%;    height: 38px; }
+
+.marker-chip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card-strong);
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  padding: 0.55rem 0.75rem 0.55rem 0.75rem;
+  min-width: 110px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.3s, background 0.3s, transform 0.2s;
+}
+.marker.a .marker-chip { bottom: 38px; }
+.marker.b .marker-chip { top: 38px; }
+.marker-chip::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  height: 8px;
+  background: currentColor;
+}
+.marker.a .marker-chip::before { bottom: -9px; }
+.marker.b .marker-chip::before { top: -9px; }
+
+.marker-role {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.15rem;
+  font-weight: 600;
+}
+.marker-name {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-variation-settings: var(--display-feat);
+  font-size: 1.05rem;
+  line-height: 1.05;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+html[data-type="technical"] .marker-name { font-weight: 600; }
+.marker-pot {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  margin-top: 0.2rem;
+  font-feature-settings: "tnum";
+}
+
+.marker-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: currentColor;
+  border: 3px solid var(--bg-card);
+  box-shadow: 0 0 0 1.5px currentColor;
+}
+.marker.dragging .marker-dot { transform: scale(1.15); }
+
+/* Electron flow path */
+.flow {
+  position: absolute;
+  top: 50%;
+  height: 22px;
+  transform: translateY(-50%);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+  transition: left 0.18s cubic-bezier(.4,.0,.2,1), width 0.18s cubic-bezier(.4,.0,.2,1);
+}
+.flow .electron {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translate(0, -50%);
+  opacity: 0;
+  animation: electronFlow var(--flow-dur, 2.2s) linear infinite;
+  animation-delay: var(--d, 0s);
+  box-shadow: 0 0 4px currentColor;
+}
+@keyframes electronFlow {
+  0%   { transform: translate(0%, -50%) scale(0.7); opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate(var(--travel, 100%), -50%) scale(0.7); opacity: 0; }
+}
+
+/* Direction-of-flow caption */
+.flow-caption {
+  position: absolute;
+  top: calc(50% - 38px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: currentColor;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.flow-caption .arrow {
+  display: inline-block;
+  margin: 0 0.4rem;
+  transform: translateY(1px);
+}
+
+/* Selected-tick highlight */
+.tick.selected-a { background: var(--c-marker-a, var(--ink)); height: 28px; width: 2px; }
+.tick.selected-b { background: var(--c-marker-b, var(--ink)); height: 28px; width: 2px; }
+
+/* ── Stage footer (live numeric strip) ───────────────────────── */
+
+.stage-foot {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 1.25rem;
+}
+.stat {
+  flex: 1;
+  padding: 0 1rem;
+  border-left: 1px solid var(--rule-soft);
+}
+.stat:first-child { padding-left: 0; border-left: 0; }
+.stat:last-child  { padding-right: 0; }
+.stat .lbl { margin-bottom: 0.35rem; }
+.stat .val {
+  font-family: var(--font-display);
+  font-variation-settings: var(--display-feat);
+  font-weight: var(--display-weight);
+  font-size: 1.65rem;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  font-feature-settings: "tnum";
+}
+.stat .val.severity-color { transition: color 0.3s; }
+.stat .val .unit {
+  font-family: var(--font-mono);
+  font-size: 0.55em;
+  font-weight: 400;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left: 0.3em;
+  vertical-align: 0.4em;
+}
+
+/* ── Vertical scale orientation ─────────────────────────────── */
+
+.scale-v {
+  display: none;
+  position: relative;
+  width: 100%;
+  height: 520px;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+html[data-orient="vertical"] .scale-h { display: none; }
+html[data-orient="vertical"] .scale-v { display: block; }
+
+.scale-v .axis {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 2px;
+  background: var(--rule);
+  transform: translateX(-50%);
+}
+.scale-v .axis-fill {
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  background: var(--ink);
+  transform: translateX(-50%);
+  transition: top 0.18s, height 0.18s, background 0.3s;
+}
+.scale-v .endcap {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--bg-card);
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.scale-v .endcap.t { top: -0.5rem; transform: translate(-50%, -100%); }
+.scale-v .endcap.b { bottom: -0.5rem; transform: translate(-50%, 100%); }
+
+.scale-v .tick {
+  top: auto;
+  left: 50%;
+  width: 14px;
+  height: 1px;
+  transform: translate(-50%, -50%);
+}
+.scale-v .tick.major { width: 22px; height: 1px; }
+.scale-v .tick-label {
+  top: auto;
+  left: calc(50% + 18px);
+  transform: translateY(-50%) rotate(0deg);
+  transform-origin: 0 50%;
+  font-size: 10px;
+}
+.scale-v .marker { left: 50%; transform: translate(-50%, -50%); }
+.scale-v .marker .marker-stem { display: none; }
+.scale-v .marker .marker-chip {
+  left: auto; top: 50%; transform: translateY(-50%);
+}
+.scale-v .marker.a .marker-chip { right: 50%; margin-right: 24px; }
+.scale-v .marker.b .marker-chip { left: 50%;  margin-left: 24px; }
+.scale-v .marker .marker-chip::before { display: none; }
+
+.scale-v .flow {
+  top: auto; left: 50%; transform: translateX(-50%);
+  width: 22px;
+  height: auto;
+}
+.scale-v .flow .electron {
+  top: 0; left: 50%;
+  animation-name: electronFlowV;
+}
+@keyframes electronFlowV {
+  0%   { transform: translate(-50%, 0) scale(0.7); opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate(-50%, var(--travelV, 100%)) scale(0.7); opacity: 0; }
+}
+.scale-v .flow-caption {
+  top: 50%; left: calc(50% + 28px);
+  transform: translateY(-50%) rotate(0deg);
+  transform-origin: 0 50%;
+}
+
+/* ── Result + cards ─────────────────────────────────────────── */
+
+.findings-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 2rem;
+  margin: 0.5rem 0 var(--gap-section);
+}
+
+.result-block {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+.result-block::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--severity-color, var(--ink));
+  transition: background 0.3s;
+}
+.result-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+  border-radius: 100px;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: background 0.3s, color 0.3s;
+}
+.result-pill::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
 }
 .result-num {
   font-family: var(--font-display);
-  font-variation-settings: "opsz" 144;
-  font-size: clamp(4.5rem, 13vw, 7rem);
-  font-weight: 400;
-  line-height: 0.95;
+  font-variation-settings: var(--display-feat);
+  font-weight: var(--display-weight);
+  font-size: var(--result-num);
+  line-height: 0.92;
   letter-spacing: -0.045em;
-  margin-bottom: 0.6rem;
   font-feature-settings: "tnum";
+  transition: color 0.3s;
 }
 .result-num .unit {
   font-family: var(--font-mono);
-  font-size: 0.2em;
+  font-size: 0.18em;
   font-weight: 400;
   color: var(--ink-3);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-left: 0.5em;
-  vertical-align: 0.55em;
+  vertical-align: 0.6em;
 }
 .result-desc {
   font-family: var(--font-display);
   font-style: italic;
   font-variation-settings: "opsz" 24;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   color: var(--ink-2);
-  max-width: 52ch;
-  margin: 0 auto;
   line-height: 1.55;
+  max-width: 50ch;
+  margin-top: 0.25rem;
+}
+html[data-type="modern"] .result-desc { font-family: 'Instrument Serif', serif; }
+html[data-type="technical"] .result-desc {
+  font-family: var(--font-body);
+  font-style: normal;
+  font-weight: 400;
 }
 
-/* ── Main analysis grid ──────────────────────────────────────── */
-
-.main {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 2.5rem;
-  align-items: start;
+.info {
+  display: flex;
+  flex-direction: column;
 }
-
-.scale-wrap {
-  background: var(--bg-card);
-  border: 1px solid var(--rule);
-  border-radius: var(--r);
-  padding: 1rem 0.5rem;
-  position: sticky;
-  top: 1rem;
-}
-.scale-wrap svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.info { display: flex; flex-direction: column; }
-
 .info-card {
   border-top: 1px solid var(--rule-soft);
-  padding: 1.6rem 0;
+  padding: var(--pad-card);
 }
 .info-card:first-child { border-top: 0; padding-top: 0; }
-.info-card:last-child { padding-bottom: 0; }
-
-.card-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 0.85rem;
-  margin-bottom: 0.6rem;
-}
+.info-card:last-child  { padding-bottom: 0; }
+.card-meta { display: flex; align-items: baseline; gap: 0.85rem; margin-bottom: 0.55rem; }
 .card-num {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -337,78 +840,363 @@ select:focus {
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 600;
 }
-
 .info-card h3 {
   font-family: var(--font-display);
   font-variation-settings: "opsz" 100;
-  font-weight: 500;
-  font-size: 1.7rem;
+  font-weight: var(--display-weight);
+  font-size: 1.5rem;
   letter-spacing: -0.01em;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
   line-height: 1.2;
 }
+html[data-type="technical"] .info-card h3 { font-weight: 600; }
 .metal-pot {
   font-family: var(--font-mono);
   font-size: 0.85rem;
   color: var(--ink-3);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.65rem;
   font-feature-settings: "tnum";
 }
 .info-card p {
   font-size: 0.95rem;
   color: var(--ink-2);
   line-height: 1.65;
-  max-width: 62ch;
+  max-width: 60ch;
 }
 
-/* ── Footer ──────────────────────────────────────────────────── */
+/* ── Scenario tray ──────────────────────────────────────────── */
+
+.tray-wrap { margin: 0 0 var(--gap-section); }
+.tray-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+.tray-head h2 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.tray-head .hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+.tray {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+.scenario {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.95rem 1rem 1rem;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s, background 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 110px;
+}
+.scenario:hover { border-color: var(--ink-3); transform: translateY(-1px); }
+.scenario.empty {
+  border-style: dashed;
+  color: var(--ink-3);
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  cursor: default;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.scenario.empty:hover { transform: none; border-color: var(--rule); }
+.scenario.active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--ink); }
+.scenario .sc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.15rem;
+}
+.scenario .sc-pair {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 100;
+  font-weight: var(--display-weight);
+  font-size: 1.05rem;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  max-height: 2.4em;
+  overflow: hidden;
+}
+html[data-type="technical"] .scenario .sc-pair { font-weight: 600; }
+.scenario .sc-pair .vs {
+  color: var(--ink-3);
+  margin: 0 0.25rem;
+  font-style: italic;
+  font-weight: 400;
+}
+.scenario .sc-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: auto;
+}
+.scenario .sc-mv {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+  transition: color 0.3s;
+}
+.scenario .sc-sev {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.scenario .sc-delete {
+  position: absolute;
+  top: 6px; right: 6px;
+  background: transparent;
+  border: 0;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.scenario:hover .sc-delete { opacity: 1; }
+.scenario .sc-delete:hover { background: var(--rule); color: var(--ink); }
+
+/* ── Methodology disclosure ─────────────────────────────────── */
+
+.methodology {
+  margin-top: var(--gap-section);
+  border-top: 1px solid var(--rule);
+  padding-top: 1.5rem;
+  display: none;
+}
+html[data-methodology="show"] .methodology { display: block; }
+.methodology h2 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 1rem;
+}
+.method-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5rem;
+}
+.method-cols h3 {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 100;
+  font-weight: var(--display-weight);
+  font-size: 1.15rem;
+  margin-bottom: 0.4rem;
+}
+html[data-type="technical"] .method-cols h3 { font-weight: 600; }
+.method-cols p {
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
 
 .foot {
-  margin-top: 3rem;
+  margin-top: var(--gap-section);
   padding-top: 1.5rem;
   border-top: 1px solid var(--rule);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--ink-3);
   line-height: 1.7;
-  letter-spacing: 0.01em;
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1.5rem;
   align-items: flex-start;
 }
-.foot p { max-width: 65ch; }
+.foot p { max-width: 70ch; }
 .foot .version { white-space: nowrap; }
 
-/* ── Responsive ──────────────────────────────────────────────── */
+/* ── Tweaks panel ───────────────────────────────────────────── */
 
-@media (max-width: 760px) {
-  body { padding: 1.5rem 1rem 2rem; }
-  .controls { grid-template-columns: 1fr; }
-  .env-btns { grid-template-columns: 1fr; }
-  .main {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
-  .scale-wrap {
-    position: static;
-    max-width: 360px;
-    margin: 0 auto;
-  }
-  .head-meta { font-size: 10px; }
+.tweaks {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: 280px;
+  max-width: calc(100vw - 2rem);
+  background: var(--bg-card-strong);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: var(--shadow-pop);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  max-height: calc(100vh - 2rem);
+}
+.tweaks.open { display: flex; }
+.tweaks-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.tweaks-head button {
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--ink-3); font-size: 16px; line-height: 1;
+  width: 22px; height: 22px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.tweaks-head button:hover { background: var(--rule); color: var(--ink); }
+
+.tweaks-body { padding: 0.5rem 0.85rem 0.85rem; overflow-y: auto; }
+
+.tweak-section { padding: 0.65rem 0 0.65rem; border-top: 1px solid var(--rule-soft); }
+.tweak-section:first-child { border-top: 0; }
+.tweak-section > .tweak-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.seg {
+  display: grid;
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
+}
+.seg.cols-2 { grid-template-columns: 1fr 1fr; }
+.seg.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.seg button {
+  font: inherit;
+  font-size: 11.5px;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  padding: 0.4rem 0.4rem;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: background 0.15s, color 0.15s;
+}
+.seg button:hover { color: var(--ink); }
+.seg button.on {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 4px 2px 6px;
+  border-radius: 4px;
+}
+.swatch:hover { background: var(--bg-card); }
+.swatch.on { background: var(--bg-card); }
+.swatch .chip {
+  width: 100%;
+  aspect-ratio: 1.6 / 1;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  position: relative;
+  overflow: hidden;
+}
+.swatch.on .chip { box-shadow: 0 0 0 1.5px var(--ink); }
+.swatch .lbl-s {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.swatch.on .lbl-s { color: var(--ink); }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+
+@media (max-width: 880px) {
+  .findings-grid { grid-template-columns: 1fr; }
+  .tray { grid-template-columns: 1fr; }
+  .method-cols { grid-template-columns: 1fr; }
+  .stat .val { font-size: 1.3rem; }
+  .stage { padding: 1.25rem 1rem 1rem; }
+  /* Switch hero to vertical at narrow widths regardless of setting */
+  .scale-h { display: none; }
+  .scale-v { display: block; height: 580px; }
+  .scale-v .tick-label { font-size: 9.5px; }
+}
+
+@media (max-width: 560px) {
+  .topbar-right { width: 100%; }
+  .env-btns { width: 100%; }
+  .env-btns button { flex: 1; justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
+  .tweaks { width: calc(100vw - 1rem); right: 0.5rem; bottom: 0.5rem; }
 }
 
 /* ── Print ───────────────────────────────────────────────────── */
 
 @media print {
-  body { background: white; padding: 0; background-image: none; }
-  .env-btns button:not(.selected) { display: none; }
-  .scale-wrap { position: static; break-inside: avoid; border-color: #ccc; }
-  .info-card { break-inside: avoid; }
-  .result::before, .result::after { display: none; }
+  body { background: white; padding: 0; background-image: none; color: #000; }
+  .tweaks, .topbar-right .icon-btn { display: none; }
+  .stage, .result-block, .info-card { box-shadow: none; }
 }
 
 /* ── Entry animation ─────────────────────────────────────────── */
@@ -422,6 +1210,7 @@ select:focus {
 .page > *:nth-child(4) { animation-delay: 0.28s; }
 .page > *:nth-child(5) { animation-delay: 0.36s; }
 .page > *:nth-child(6) { animation-delay: 0.44s; }
+.page > *:nth-child(7) { animation-delay: 0.50s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(8px); }
@@ -429,105 +1218,713 @@ select:focus {
 }
 @media (prefers-reduced-motion: reduce) {
   .page > * { animation: none; }
+  .flow .electron { animation: none; display: none; }
   * { transition: none !important; }
 }
-
-/* Smooth value transitions on update */
-.result-pill, .info-card h3, .card-tag {
-  transition: color 0.25s ease, background-color 0.25s ease;
-}
 </style>
-
 </head>
+
 <body>
 <main class="page">
 
   <div class="head-meta">
-    <span class="ref"><span class="dot"></span>Reference / building envelope</span>
-    <span class="ref-num">No. 01</span>
+    <span class="ref"><span class="dot"></span>Reference / building envelope · No. 02</span>
+    <span class="ref-num" id="env-meta">Standard exposure · inland rain</span>
   </div>
 
   <h1 class="title">Galvanic compatibility</h1>
-  <p class="subtitle">Predicting corrosion intensity between dissimilar metals in exterior building assemblies.</p>
+  <p class="subtitle">Drag two metals along the series. Watch the potential gap, severity, and direction of corrosion shift in real time.</p>
 
   <hr class="rule">
 
-  <section class="tool" aria-label="Galvanic compatibility tool">
-
-```
-<div class="controls">
-  <div>
-    <label class="lbl" for="metal1">Metal A</label>
-    <select id="metal1"></select>
+  <div class="topbar">
+    <span class="lbl">Exposure environment</span>
+    <div class="topbar-right">
+      <div class="env-btns" role="radiogroup" aria-label="Exposure environment">
+        <button data-env="sheltered" type="button"><span class="env-glyph"></span>Sheltered</button>
+        <button data-env="standard"  type="button" class="selected"><span class="env-glyph"></span>Standard</button>
+        <button data-env="coastal"   type="button"><span class="env-glyph"></span>Coastal</button>
+      </div>
+      <button class="icon-btn" id="save-btn" type="button" title="Save this scenario">
+        <span class="glyph">＋</span> Save scenario
+      </button>
+      <button class="icon-btn" id="swap-btn" type="button" title="Swap metals A↔B">
+        <span class="glyph">⇄</span> Swap
+      </button>
+    </div>
   </div>
-  <div>
-    <label class="lbl" for="metal2">Metal B</label>
-    <select id="metal2"></select>
-  </div>
-</div>
 
-<div class="env">
-  <span class="lbl">Exposure environment</span>
-  <div class="env-btns" role="radiogroup" aria-label="Exposure environment">
-    <button data-env="sheltered" type="button">Sheltered<span class="sub">soffits, cavities</span></button>
-    <button data-env="standard"  type="button" class="selected">Standard<span class="sub">inland rain</span></button>
-    <button data-env="coastal"   type="button">Coastal<span class="sub">salt air</span></button>
-  </div>
-</div>
+  <!-- HERO SCALE STAGE ─────────────────────────────────────── -->
+  <section class="stage" aria-label="Galvanic series scale">
 
-<div class="result" id="result" aria-live="polite"></div>
+    <div class="stage-head">
+      <span class="lbl l">Galvanic series · vs. SCE in flowing seawater</span>
+      <span class="lbl r">Drag either marker · or click any metal</span>
+    </div>
 
-<div class="main">
-  <div class="scale-wrap" aria-label="Galvanic series scale">
-    <svg id="scale" viewBox="0 0 300 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vertical galvanic series of exterior building metals"></svg>
-  </div>
-  <div class="info" id="info"></div>
-</div>
-```
+    <!-- Horizontal scale -->
+    <div class="scale-h" id="scale-h" aria-label="Horizontal galvanic series">
+      <span class="endcap l">Active<span class="lo">corrodes</span></span>
+      <span class="endcap r">Noble<span class="lo">protected</span></span>
+      <div class="axis"></div>
+      <div class="axis-cap l"></div>
+      <div class="axis-cap r"></div>
+      <div class="axis-fill" id="axis-fill-h"></div>
+      <div class="flow" id="flow-h"></div>
+      <div class="flow-caption" id="flow-cap-h"></div>
+      <!-- ticks + markers populated by JS -->
+    </div>
 
+    <!-- Vertical scale -->
+    <div class="scale-v" id="scale-v" aria-label="Vertical galvanic series">
+      <span class="endcap t">Active · corrodes</span>
+      <span class="endcap b">Noble · protected</span>
+      <div class="axis"></div>
+      <div class="axis-fill" id="axis-fill-v"></div>
+      <div class="flow" id="flow-v"></div>
+      <div class="flow-caption" id="flow-cap-v"></div>
+    </div>
+
+    <div class="stage-foot">
+      <div class="stat">
+        <span class="lbl">Potential gap</span>
+        <div class="val severity-color" id="stat-mv" style="color: var(--severity-color, var(--ink));">—<span class="unit">mV</span></div>
+      </div>
+      <div class="stat">
+        <span class="lbl">Severity</span>
+        <div class="val severity-color" id="stat-sev" style="color: var(--severity-color, var(--ink));">—</div>
+      </div>
+      <div class="stat">
+        <span class="lbl">Anode (corrodes)</span>
+        <div class="val" id="stat-anode" style="font-size: 1.15rem;">—</div>
+      </div>
+      <div class="stat">
+        <span class="lbl">Cathode (protected)</span>
+        <div class="val" id="stat-cathode" style="font-size: 1.15rem;">—</div>
+      </div>
+    </div>
   </section>
 
-  <hr class="rule" style="margin-top: 3rem;">
+  <!-- FINDINGS GRID ────────────────────────────────────────── -->
+  <section class="findings-grid">
+    <div class="result-block" id="result-block">
+      <span class="result-pill" id="result-pill">— reaction</span>
+      <div class="result-num" id="result-num">—<span class="unit">mV</span></div>
+      <p class="result-desc" id="result-desc">Select two different metals to begin.</p>
+    </div>
+    <div class="info" id="info">
+      <div class="info-card">
+        <div class="card-meta"><span class="card-num">01</span><span class="card-tag">Detailing</span></div>
+        <h3>How to build the joint</h3>
+        <p>Choose two different metals to receive specific detailing guidance.</p>
+      </div>
+    </div>
+  </section>
 
+  <!-- SCENARIO TRAY ────────────────────────────────────────── -->
+  <section class="tray-wrap" aria-label="Saved scenarios">
+    <div class="tray-head">
+      <h2>Saved scenarios</h2>
+      <span class="hint" id="tray-hint">Up to 3 · click to recall</span>
+    </div>
+    <div class="tray" id="tray"></div>
+  </section>
+
+  <!-- METHODOLOGY (toggle via tweaks) ──────────────────────── -->
+  <section class="methodology" aria-label="Methodology">
+    <h2>Methodology</h2>
+    <div class="method-cols">
+      <div>
+        <h3>Potentials</h3>
+        <p>Referenced to the saturated calomel electrode (SCE) in flowing seawater, drawn from ASTM G82 and MIL-STD-889. Rounded to 2 decimal places for clarity.</p>
+      </div>
+      <div>
+        <h3>Severity thresholds</h3>
+        <p>Conventionally tolerable below ~150 mV, aggressive above ~500 mV. Sheltered ×2.0, standard ×1.0, coastal ×0.5 — reflecting how electrolyte availability changes corrosion rate.</p>
+      </div>
+      <div>
+        <h3>Limits</h3>
+        <p>Does not model crevice / pitting, area ratios quantitatively, surface treatments, microclimates, or time-dependent passivation. Screening tool only.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
   <footer class="foot">
-    <p>Potentials referenced to the saturated calomel electrode in flowing seawater. Severity thresholds adjust for the selected exterior exposure. This tool screens compatibility for design — it does not replace project-specific corrosion engineering.</p>
-    <span class="version">v1.0</span>
+    <p>Single-file portable reference. Saved scenarios persist locally in your browser only. Deep-link a result with the URL — append <code>?a=aluminum&amp;b=copper&amp;env=coastal</code>.</p>
+    <span class="version">v2.0</span>
   </footer>
 
 </main>
 
+<!-- TWEAKS PANEL ─────────────────────────────────────────── -->
+<aside class="tweaks" id="tweaks" aria-label="Tweaks panel" aria-hidden="true">
+  <div class="tweaks-head">
+    <span>Tweaks</span>
+    <button id="tweaks-close" type="button" aria-label="Close">×</button>
+  </div>
+  <div class="tweaks-body">
+
+    <div class="tweak-section">
+      <div class="tweak-label">Palette</div>
+      <div class="swatches" data-key="palette">
+        <button class="swatch" data-val="paper" type="button">
+          <span class="chip" style="background:#F2EDE2;"><span style="display:block;width:60%;height:30%;margin:8% auto 0;background:#8E2A1D;border-radius:1px;"></span><span style="display:block;width:40%;height:18%;margin:6% auto 0;background:#1A1612;border-radius:1px;"></span></span>
+          <span class="lbl-s">Paper</span>
+        </button>
+        <button class="swatch" data-val="dark" type="button">
+          <span class="chip" style="background:#14110D;"><span style="display:block;width:60%;height:30%;margin:8% auto 0;background:#E66A5A;border-radius:1px;"></span><span style="display:block;width:40%;height:18%;margin:6% auto 0;background:#F4EEDF;border-radius:1px;"></span></span>
+          <span class="lbl-s">Dark</span>
+        </button>
+        <button class="swatch" data-val="blueprint" type="button">
+          <span class="chip" style="background:#0E2748;"><span style="display:block;width:60%;height:30%;margin:8% auto 0;background:#F07466;border-radius:1px;"></span><span style="display:block;width:40%;height:18%;margin:6% auto 0;background:#F0F5FA;border-radius:1px;"></span></span>
+          <span class="lbl-s">Blueprint</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tweak-section">
+      <div class="tweak-label">Typography</div>
+      <div class="seg cols-3" data-key="type">
+        <button data-val="editorial" type="button">Editorial</button>
+        <button data-val="modern"    type="button">Modern</button>
+        <button data-val="technical" type="button">Technical</button>
+      </div>
+    </div>
+
+    <div class="tweak-section">
+      <div class="tweak-label">Density</div>
+      <div class="seg cols-3" data-key="density">
+        <button data-val="compact"  type="button">Compact</button>
+        <button data-val="standard" type="button">Standard</button>
+        <button data-val="spacious" type="button">Spacious</button>
+      </div>
+    </div>
+
+    <div class="tweak-section">
+      <div class="tweak-label">Scale orientation</div>
+      <div class="seg cols-2" data-key="orient">
+        <button data-val="horizontal" type="button">Horizontal</button>
+        <button data-val="vertical"   type="button">Vertical</button>
+      </div>
+    </div>
+
+    <div class="tweak-section">
+      <div class="tweak-label">Methodology footnotes</div>
+      <div class="seg cols-2" data-key="methodology">
+        <button data-val="hide" type="button">Hide</button>
+        <button data-val="show" type="button">Show</button>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
 <script>
-(function() {
+(function () {
   'use strict';
 
+  /* ──────────────────────────────────────────────────────────
+     DATA
+     ────────────────────────────────────────────────────────── */
+
   const metals = [
-    { id: 'magnesium',     name: 'Magnesium',         potential: -1.60 },
-    { id: 'zinc',          name: 'Zinc / galvanized', potential: -1.05 },
-    { id: 'aluminum',      name: 'Aluminum',          potential: -0.90 },
-    { id: 'mild-steel',    name: 'Mild steel',        potential: -0.68 },
-    { id: 'weather-steel', name: 'Weathering steel',  potential: -0.62 },
-    { id: 'lead',          name: 'Lead',              potential: -0.52 },
-    { id: 'brass',         name: 'Brass',             potential: -0.34 },
-    { id: 'copper',        name: 'Copper',            potential: -0.28 },
-    { id: 'bronze',        name: 'Bronze',            potential: -0.22 },
-    { id: 'stainless',     name: 'Stainless steel',   potential: -0.05 },
-    { id: 'titanium',      name: 'Titanium',          potential:  0.05 }
+    { id: 'magnesium',         name: 'Magnesium',          short: 'Mg',  potential: -1.60 },
+    { id: 'zinc',              name: 'Zinc / galvanized',  short: 'Zn',  potential: -1.05 },
+    { id: 'galvalume',         name: 'Galvalume',          short: 'GZ',  potential: -0.95 },
+    { id: 'aluminum',          name: 'Aluminum',           short: 'Al',  potential: -0.90 },
+    { id: 'mild-steel',        name: 'Mild steel',         short: 'Fe',  potential: -0.68 },
+    { id: 'weather-steel',     name: 'Weathering steel',   short: 'WS',  potential: -0.62 },
+    { id: 'terne',             name: 'Terne-coated steel', short: 'Tn',  potential: -0.55 },
+    { id: 'lead',              name: 'Lead',               short: 'Pb',  potential: -0.52 },
+    { id: 'lead-coated-copper',name: 'Lead-coated copper', short: 'LCu', potential: -0.45 },
+    { id: 'brass',             name: 'Brass',              short: 'Br',  potential: -0.34 },
+    { id: 'copper',            name: 'Copper',             short: 'Cu',  potential: -0.28 },
+    { id: 'bronze',            name: 'Bronze',             short: 'Bz',  potential: -0.22 },
+    { id: 'nickel',            name: 'Nickel',             short: 'Ni',  potential: -0.15 },
+    { id: 'monel',             name: 'Monel 400',          short: 'Mn',  potential: -0.10 },
+    { id: 'stainless',         name: 'Stainless 304',      short: '304', potential: -0.08 },
+    { id: 'stainless-316',     name: 'Stainless 316',      short: '316', potential: -0.05 },
+    { id: 'titanium',          name: 'Titanium',           short: 'Ti',  potential:  0.05 }
   ];
 
   const ENVIRONMENTS = {
-    sheltered: { mult: 2.0, phrase: 'in sheltered exposure' },
-    standard:  { mult: 1.0, phrase: 'in standard rain exposure' },
-    coastal:   { mult: 0.5, phrase: 'in coastal exposure' }
+    sheltered: { mult: 2.0, phrase: 'in sheltered exposure',     meta: 'Sheltered · soffits, cavities' },
+    standard:  { mult: 1.0, phrase: 'in standard rain exposure', meta: 'Standard · inland rain' },
+    coastal:   { mult: 0.5, phrase: 'in coastal exposure',       meta: 'Coastal · salt air' }
   };
 
   const BASE = [0.15, 0.30, 0.50];
-
   const SEVERITIES = [
     { label: 'Compatible', token: 'compat'   },
     { label: 'Mild',       token: 'mild'     },
     { label: 'Moderate',   token: 'moderate' },
     { label: 'Severe',     token: 'severe'   }
   ];
+
+  // The 3 most architecturally common — marked "major" on the scale
+  const MAJOR_IDS = new Set(['aluminum', 'mild-steel', 'copper', 'stainless', 'zinc']);
+
+  /* ──────────────────────────────────────────────────────────
+     TWEAKS — defaults wrapped in EDITMODE markers for host
+     ────────────────────────────────────────────────────────── */
+
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "palette": "blueprint",
+    "type": "technical",
+    "density": "compact",
+    "orient": "horizontal",
+    "methodology": "show"
+  }/*EDITMODE-END*/;
+
+  const tweaks = Object.assign({}, TWEAK_DEFAULTS);
+
+  function applyTweaks() {
+    document.documentElement.setAttribute('data-palette',     tweaks.palette);
+    document.documentElement.setAttribute('data-type',        tweaks.type);
+    document.documentElement.setAttribute('data-density',     tweaks.density);
+    document.documentElement.setAttribute('data-orient',      tweaks.orient);
+    document.documentElement.setAttribute('data-methodology', tweaks.methodology);
+    document.querySelectorAll('.tweaks [data-key]').forEach(group => {
+      const k = group.dataset.key;
+      group.querySelectorAll('[data-val]').forEach(btn => {
+        btn.classList.toggle('on', btn.dataset.val === tweaks[k]);
+      });
+    });
+    // Re-render scale because geometry depends on orientation
+    layoutScale();
+    render();
+  }
+
+  function setTweak(key, val) {
+    tweaks[key] = val;
+    applyTweaks();
+    try {
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
+    } catch (e) {}
+  }
+
+  /* ──────────────────────────────────────────────────────────
+     STATE
+     ────────────────────────────────────────────────────────── */
+
+  const state = { a: 3, b: 10, env: 'standard' }; // aluminum vs copper
+
+  /* URL params */
+  function readUrl() {
+    try {
+      const p = new URLSearchParams(location.search);
+      const aId = p.get('a'), bId = p.get('b'), env = p.get('env');
+      if (aId) { const i = metals.findIndex(m => m.id === aId); if (i >= 0) state.a = i; }
+      if (bId) { const i = metals.findIndex(m => m.id === bId); if (i >= 0) state.b = i; }
+      if (env && ENVIRONMENTS[env]) state.env = env;
+    } catch (e) {}
+  }
+  function writeUrl() {
+    try {
+      const p = new URLSearchParams();
+      p.set('a', metals[state.a].id);
+      p.set('b', metals[state.b].id);
+      p.set('env', state.env);
+      history.replaceState(null, '', '?' + p.toString());
+    } catch (e) {}
+  }
+
+  /* ──────────────────────────────────────────────────────────
+     MATH
+     ────────────────────────────────────────────────────────── */
+
+  function severityIndex(diff, envKey) {
+    const a = Math.abs(diff);
+    const m = ENVIRONMENTS[envKey].mult;
+    const t = BASE.map(x => x * m);
+    if (a < t[0]) return 0;
+    if (a < t[1]) return 1;
+    if (a < t[2]) return 2;
+    return 3;
+  }
+  function fmtV(p) { return (p >= 0 ? '+' : '') + p.toFixed(2); }
+  function esc(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  /* ──────────────────────────────────────────────────────────
+     SCALE GEOMETRY + RENDERING
+     ────────────────────────────────────────────────────────── */
+
+  const POT_MIN = -1.70, POT_MAX = 0.15;
+  const range = POT_MAX - POT_MIN;
+  function pctFor(p) { return ((p - POT_MIN) / range) * 100; }
+
+  const scaleH    = document.getElementById('scale-h');
+  const scaleV    = document.getElementById('scale-v');
+  const axisFillH = document.getElementById('axis-fill-h');
+  const axisFillV = document.getElementById('axis-fill-v');
+  const flowH     = document.getElementById('flow-h');
+  const flowV     = document.getElementById('flow-v');
+  const flowCapH  = document.getElementById('flow-cap-h');
+  const flowCapV  = document.getElementById('flow-cap-v');
+
+  // Build ticks + markers once
+  function buildScaleH() {
+    // remove any existing ticks/labels/markers
+    scaleH.querySelectorAll('.tick, .tick-label, .marker').forEach(n => n.remove());
+    metals.forEach((m, i) => {
+      const x = pctFor(m.potential);
+      const t = document.createElement('span');
+      t.className = 'tick' + (MAJOR_IDS.has(m.id) ? ' major' : '');
+      t.style.left = x + '%';
+      t.dataset.idx = i;
+      scaleH.appendChild(t);
+
+      const lab = document.createElement('span');
+      lab.className = 'tick-label';
+      lab.style.left = x + '%';
+      lab.textContent = m.short;
+      lab.dataset.idx = i;
+      lab.title = m.name + ' (' + fmtV(m.potential) + ' V)';
+      scaleH.appendChild(lab);
+    });
+    ['a','b'].forEach(role => {
+      const mk = document.createElement('div');
+      mk.className = 'marker ' + role;
+      mk.dataset.role = role;
+      mk.tabIndex = 0;
+      mk.setAttribute('role', 'slider');
+      mk.setAttribute('aria-label', 'Metal ' + role.toUpperCase());
+      mk.innerHTML =
+        '<div class="marker-stem"></div>' +
+        '<div class="marker-chip">' +
+          '<span class="marker-role"></span>' +
+          '<span class="marker-name"></span>' +
+          '<span class="marker-pot"></span>' +
+        '</div>' +
+        '<div class="marker-dot"></div>';
+      scaleH.appendChild(mk);
+    });
+  }
+
+  function buildScaleV() {
+    scaleV.querySelectorAll('.tick, .tick-label, .marker').forEach(n => n.remove());
+    metals.forEach((m, i) => {
+      // V scale: most active (most negative potential) at TOP — convention for galvanic series charts.
+      // pctFor(magnesium) = 5.4%, so top: 5.4% places it near the top of the column.
+      const y = pctFor(m.potential);
+      const t = document.createElement('span');
+      t.className = 'tick' + (MAJOR_IDS.has(m.id) ? ' major' : '');
+      t.style.top = y + '%';
+      t.dataset.idx = i;
+      scaleV.appendChild(t);
+
+      const lab = document.createElement('span');
+      lab.className = 'tick-label';
+      lab.style.top = y + '%';
+      lab.textContent = m.name;
+      lab.dataset.idx = i;
+      scaleV.appendChild(lab);
+    });
+    ['a','b'].forEach(role => {
+      const mk = document.createElement('div');
+      mk.className = 'marker ' + role;
+      mk.dataset.role = role;
+      mk.tabIndex = 0;
+      mk.setAttribute('role', 'slider');
+      mk.innerHTML =
+        '<div class="marker-stem"></div>' +
+        '<div class="marker-chip">' +
+          '<span class="marker-role"></span>' +
+          '<span class="marker-name"></span>' +
+          '<span class="marker-pot"></span>' +
+        '</div>' +
+        '<div class="marker-dot"></div>';
+      scaleV.appendChild(mk);
+    });
+  }
+
+  function layoutScale() {
+    buildScaleH();
+    buildScaleV();
+    bindDrag();
+    bindTickClicks();
+  }
+
+  /* ──────────────────────────────────────────────────────────
+     DRAG INTERACTION  (snap to nearest metal during drag)
+     ────────────────────────────────────────────────────────── */
+
+  let dragging = null;
+
+  function nearestMetalFromPctH(pct) {
+    // pct: 0..100 along potential range
+    const potential = POT_MIN + (pct / 100) * range;
+    let best = 0, bestDist = Infinity;
+    metals.forEach((m, i) => {
+      const d = Math.abs(m.potential - potential);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    return best;
+  }
+  function nearestMetalFromPctV(pctTop) {
+    // pctTop: 0..100, 0 = active (top) = most negative
+    return nearestMetalFromPctH(100 - pctTop);
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const isV = tweaks.orient === 'vertical' || window.matchMedia('(max-width:880px)').matches;
+    const host = isV ? scaleV : scaleH;
+    const rect = host.getBoundingClientRect();
+    let idx;
+    if (isV) {
+      const y = e.clientY - rect.top;
+      const pct = Math.max(0, Math.min(100, (y / rect.height) * 100));
+      idx = nearestMetalFromPctV(pct);
+    } else {
+      const x = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+      idx = nearestMetalFromPctH(pct);
+    }
+    // Don't allow same metal as the other marker → just pick the closest non-conflicting
+    const other = dragging.role === 'a' ? state.b : state.a;
+    if (idx === other) {
+      // pick nearest neighbour
+      const above = idx > 0 ? idx - 1 : null;
+      const below = idx < metals.length - 1 ? idx + 1 : null;
+      idx = (above !== null ? above : below);
+    }
+    if (idx !== state[dragging.role]) {
+      state[dragging.role] = idx;
+      render();
+    }
+  }
+
+  function onPointerUp() {
+    if (dragging) {
+      document.querySelectorAll('.marker.dragging').forEach(m => m.classList.remove('dragging'));
+      dragging = null;
+      writeUrl();
+      // suppress the click event that fires right after the drag
+      justDragged = true;
+      setTimeout(() => { justDragged = false; }, 50);
+    }
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup',   onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+  }
+
+  function bindDrag() {
+    document.querySelectorAll('.marker').forEach(mk => {
+      mk.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        dragging = { role: mk.dataset.role };
+        document.querySelectorAll('.marker.' + mk.dataset.role).forEach(m => m.classList.add('dragging'));
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup',   onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+      });
+      // keyboard nudge
+      mk.addEventListener('keydown', (e) => {
+        const role = mk.dataset.role;
+        const cur = state[role];
+        let next = cur;
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = cur - 1;
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = cur + 1;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End')  next = metals.length - 1;
+        else return;
+        e.preventDefault();
+        next = Math.max(0, Math.min(metals.length - 1, next));
+        const other = role === 'a' ? state.b : state.a;
+        if (next === other) {
+          next = next + (next > cur ? 1 : -1);
+          next = Math.max(0, Math.min(metals.length - 1, next));
+          if (next === other) return;
+        }
+        state[role] = next;
+        render(); writeUrl();
+      });
+    });
+  }
+
+  let justDragged = false;
+
+  function bindTickClicks() {
+    // Click anywhere along the scale (label, tick, or empty axis space) to assign
+    // the nearest metal to whichever marker is currently closer to it.
+    [scaleH, scaleV].forEach(host => {
+      host.addEventListener('click', (e) => {
+        if (justDragged) return;
+        if (e.target.closest('.marker')) return;
+        const rect = host.getBoundingClientRect();
+        const isV = host === scaleV;
+        let pct;
+        if (isV) {
+          pct = ((e.clientY - rect.top) / rect.height) * 100;
+        } else {
+          pct = ((e.clientX - rect.left) / rect.width) * 100;
+        }
+        pct = Math.max(0, Math.min(100, pct));
+        const idx = isV ? nearestMetalFromPctV(pct) : nearestMetalFromPctH(pct);
+        if (idx === state.a || idx === state.b) return;
+        const dA = Math.abs(metals[state.a].potential - metals[idx].potential);
+        const dB = Math.abs(metals[state.b].potential - metals[idx].potential);
+        if (dA <= dB) state.a = idx;
+        else state.b = idx;
+        render(); writeUrl();
+      });
+    });
+  }
+
+  /* ──────────────────────────────────────────────────────────
+     RENDER (everything that updates per-state)
+     ────────────────────────────────────────────────────────── */
+
+  function render() {
+    const m1 = metals[state.a];
+    const m2 = metals[state.b];
+    const sameMetal = state.a === state.b;
+
+    const diff = Math.abs(m1.potential - m2.potential);
+    const sevIdx = sameMetal ? 0 : severityIndex(diff, state.env);
+    const sev = SEVERITIES[sevIdx];
+    const sevColor   = 'var(--c-' + sev.token + ')';
+    const sevBg      = 'var(--c-' + sev.token + '-bg)';
+    const anode   = m1.potential < m2.potential ? m1 : m2;
+    const cathode = m1.potential < m2.potential ? m2 : m1;
+    const dmv = Math.round(diff * 1000);
+
+    document.documentElement.style.setProperty('--severity-color', sevColor);
+    document.documentElement.style.setProperty('--severity-bg', sevBg);
+
+    // ── Tick highlight ─────────────────
+    document.querySelectorAll('.tick').forEach(t => {
+      t.classList.remove('selected-a','selected-b');
+    });
+    document.querySelectorAll('.tick-label').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tick[data-idx="' + state.a + '"]').forEach(t => t.classList.add('selected-a'));
+    document.querySelectorAll('.tick[data-idx="' + state.b + '"]').forEach(t => t.classList.add('selected-b'));
+    document.querySelectorAll('.tick-label[data-idx="' + state.a + '"]').forEach(t => t.classList.add('active'));
+    document.querySelectorAll('.tick-label[data-idx="' + state.b + '"]').forEach(t => t.classList.add('active'));
+
+    // ── Position markers + axis fill ────
+    const pA = pctFor(m1.potential);
+    const pB = pctFor(m2.potential);
+    const left = Math.min(pA, pB);
+    const right = Math.max(pA, pB);
+    const span = right - left;
+
+    // Horizontal
+    document.querySelectorAll('.scale-h .marker.a').forEach(m => { m.style.left = pA + '%'; m.style.color = sevColor; });
+    document.querySelectorAll('.scale-h .marker.b').forEach(m => { m.style.left = pB + '%'; m.style.color = sevColor; });
+    axisFillH.style.left  = left + '%';
+    axisFillH.style.width = span + '%';
+    axisFillH.style.background = sevColor;
+    flowH.style.left = left + '%';
+    flowH.style.width = span + '%';
+    flowH.style.color = sevColor;
+
+    // Vertical: top = active (low potential). Since pctFor maps most-negative → low %, top: pctFor(p) works directly.
+    const yA = pA;
+    const yB = pB;
+    const top    = Math.min(yA, yB);
+    const bottom = Math.max(yA, yB);
+    const heightV = bottom - top;
+    document.querySelectorAll('.scale-v .marker.a').forEach(m => { m.style.top = yA + '%'; m.style.color = sevColor; });
+    document.querySelectorAll('.scale-v .marker.b').forEach(m => { m.style.top = yB + '%'; m.style.color = sevColor; });
+    axisFillV.style.top = top + '%';
+    axisFillV.style.height = heightV + '%';
+    axisFillV.style.background = sevColor;
+    flowV.style.top = top + '%';
+    flowV.style.height = heightV + '%';
+    flowV.style.color = sevColor;
+
+    // ── Marker labels (anode/cathode roles)
+    const aIsAnode = m1.potential < m2.potential;
+    function setMarker(role, isAnode, metal) {
+      document.querySelectorAll('.marker.' + role).forEach(mk => {
+        mk.querySelector('.marker-role').textContent = sameMetal ? '— · —' : (isAnode ? 'Anode · corrodes' : 'Cathode · protected');
+        mk.querySelector('.marker-name').textContent = metal.name;
+        mk.querySelector('.marker-pot').textContent  = fmtV(metal.potential) + ' V';
+        mk.setAttribute('aria-valuetext', metal.name + ', ' + fmtV(metal.potential) + ' V');
+      });
+    }
+    setMarker('a', aIsAnode, m1);
+    setMarker('b', !aIsAnode, m2);
+
+    // ── Electron flow ───────────────────
+    renderFlow(flowH, sevIdx, sameMetal, aIsAnode, false);
+    renderFlow(flowV, sevIdx, sameMetal, aIsAnode, true);
+    // Direction caption — anode is always on the active end of the axis (left in H, top in V), so the arrow is constant.
+    [flowCapH, flowCapV].forEach((cap, i) => {
+      const vertical = i === 1;
+      if (sameMetal || sevIdx === 0) {
+        cap.innerHTML = '';
+        cap.style.opacity = '0';
+        return;
+      }
+      cap.style.opacity = '1';
+      cap.style.color = sevColor;
+      const arrow = vertical ? '↓' : '→';
+      cap.innerHTML = 'e⁻ <span class="arrow">' + arrow + '</span> to cathode';
+    });
+
+    // ── Stage foot
+    document.getElementById('stat-mv').innerHTML  = sameMetal ? '0<span class="unit">mV</span>' : dmv + '<span class="unit">mV</span>';
+    document.getElementById('stat-sev').textContent  = sameMetal ? '—' : sev.label;
+    document.getElementById('stat-anode').textContent   = sameMetal ? '—' : anode.name;
+    document.getElementById('stat-cathode').textContent = sameMetal ? '—' : cathode.name;
+
+    // ── Result block
+    const resultPill = document.getElementById('result-pill');
+    const resultNum  = document.getElementById('result-num');
+    const resultDesc = document.getElementById('result-desc');
+    if (sameMetal) {
+      resultPill.textContent = 'No reaction';
+      resultPill.style.background = 'var(--rule)';
+      resultPill.style.color = 'var(--ink-2)';
+      resultNum.innerHTML = '0<span class="unit">mV</span>';
+      resultNum.style.color = 'var(--ink-2)';
+      resultDesc.textContent = 'Identical metals have no potential difference — no galvanic cell forms. Pick two different metals.';
+    } else {
+      resultPill.textContent = sev.label + ' reaction';
+      resultPill.style.background = sevBg;
+      resultPill.style.color = sevColor;
+      resultNum.innerHTML = dmv + '<span class="unit">mV</span>';
+      resultNum.style.color = sevColor;
+      resultDesc.textContent = descFor(sevIdx, state.env);
+    }
+
+    // ── Info cards
+    const infoEl = document.getElementById('info');
+    if (sameMetal) {
+      infoEl.innerHTML =
+        '<div class="info-card"><div class="card-meta"><span class="card-num">01</span><span class="card-tag" style="color:var(--ink-3);">Note</span></div><h3>Self-pairing</h3><p>Identical metals at a junction have no electrochemical potential difference, so no galvanic cell forms. Pick two different metals to see how they interact.</p></div>';
+    } else {
+      infoEl.innerHTML =
+        '<div class="info-card">' +
+          '<div class="card-meta"><span class="card-num">01</span><span class="card-tag" style="color:var(--c-severe);">Anode — corrodes</span></div>' +
+          '<h3>' + esc(anode.name) + '</h3>' +
+          '<div class="metal-pot">' + fmtV(anode.potential) + ' V vs. SCE</div>' +
+          '<p>The more active metal at this junction. It loses electrons and dissolves into rainwater or condensate, producing pitting, white salts, or rust streaks on the building face.</p>' +
+        '</div>' +
+        '<div class="info-card">' +
+          '<div class="card-meta"><span class="card-num">02</span><span class="card-tag" style="color:var(--c-compat);">Cathode — protected</span></div>' +
+          '<h3>' + esc(cathode.name) + '</h3>' +
+          '<div class="metal-pot">' + fmtV(cathode.potential) + ' V vs. SCE</div>' +
+          '<p>The more noble metal. It accepts electrons and stays intact — actually shielded from corrosion at the anode\u2019s expense, the way galvanizing protects the steel beneath it.</p>' +
+        '</div>' +
+        '<div class="info-card">' +
+          '<div class="card-meta"><span class="card-num">03</span><span class="card-tag" style="color:var(--ink-2);">Detailing</span></div>' +
+          '<h3>How to build the joint</h3>' +
+          '<p>' + detailingText(sevIdx, state.env, anode) + '</p>' +
+        '</div>';
+    }
+
+    // ── Env meta in header
+    document.getElementById('env-meta').textContent = ENVIRONMENTS[state.env].meta;
+
+    // ── Re-render scenarios (active highlight)
+    renderTray();
+  }
 
   function descFor(sevIdx, envKey) {
     const p = ENVIRONMENTS[envKey].phrase;
@@ -555,185 +1952,194 @@ select:focus {
     return 'Avoid direct contact. Use dielectric separators (EPDM, butyl tape, plastic isolators) at every contact point. Substitute one metal where the design allows.' + sizeRule;
   }
 
-  function severityIndex(diff, envKey) {
-    const a = Math.abs(diff);
-    const m = ENVIRONMENTS[envKey].mult;
-    const t = BASE.map(x => x * m);
-    if (a < t[0]) return 0;
-    if (a < t[1]) return 1;
-    if (a < t[2]) return 2;
-    return 3;
+  /* ──────────────────────────────────────────────────────────
+     ELECTRON FLOW  (severity tunes count + speed)
+     ────────────────────────────────────────────────────────── */
+
+  function renderFlow(host, sevIdx, sameMetal, aIsAnode, vertical) {
+    host.innerHTML = '';
+    if (sameMetal || sevIdx === 0) return;
+    const count = [0, 3, 5, 7][sevIdx];
+    const dur   = [0, 2.6, 2.0, 1.5][sevIdx];
+    // Anode (most negative) is always at the active end of the axis — left in horizontal,
+    // top in vertical — so electron flow direction is always positive across the fill.
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('span');
+      el.className = 'electron';
+      el.style.setProperty('--flow-dur', dur + 's');
+      el.style.setProperty('--d', (i * (dur / count)) + 's');
+      if (vertical) {
+        el.style.setProperty('--travelV', '100%');
+        el.style.left = '50%';
+        el.style.transform = 'translate(-50%, 0)';
+      } else {
+        el.style.setProperty('--travel', '100%');
+      }
+      host.appendChild(el);
+    }
   }
 
-  function fmtV(p) { return (p >= 0 ? '+' : '') + p.toFixed(2); }
-  function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  /* ──────────────────────────────────────────────────────────
+     SCENARIOS  (save & compare)
+     ────────────────────────────────────────────────────────── */
 
-  /* DOM */
-  const m1Sel    = document.getElementById('metal1');
-  const m2Sel    = document.getElementById('metal2');
-  const resEl    = document.getElementById('result');
-  const infoEl   = document.getElementById('info');
-  const scaleSvg = document.getElementById('scale');
+  const SCENARIO_KEY = 'galvanic-scenarios-v2';
+  const MAX_SCENARIOS = 3;
 
-  metals.forEach((m, i) => {
-    const v = fmtV(m.potential);
-    m1Sel.add(new Option(m.name + ' (' + v + ' V)', i));
-    m2Sel.add(new Option(m.name + ' (' + v + ' V)', i));
-  });
-
-  /* State */
-  const state = { a: 2, b: 9, env: 'standard' };
-
-  /* URL params */
-  function readUrl() {
+  function loadScenarios() {
     try {
-      const p = new URLSearchParams(location.search);
-      const aId = p.get('a'), bId = p.get('b'), env = p.get('env');
-      if (aId) { const i = metals.findIndex(m => m.id === aId); if (i >= 0) state.a = i; }
-      if (bId) { const i = metals.findIndex(m => m.id === bId); if (i >= 0) state.b = i; }
-      if (env && ENVIRONMENTS[env]) state.env = env;
-    } catch (e) { /* same as writeUrl: ignore in sandboxed contexts */ }
+      const raw = localStorage.getItem(SCENARIO_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.slice(0, MAX_SCENARIOS) : [];
+    } catch (e) { return []; }
   }
-  function writeUrl() {
-    try {
-      const p = new URLSearchParams();
-      p.set('a', metals[state.a].id);
-      p.set('b', metals[state.b].id);
-      p.set('env', state.env);
-      history.replaceState(null, '', '?' + p.toString());
-    } catch (e) {
-      /* Sandboxed iframes and some file:// contexts disallow history manipulation.
-         Deep-linking won't work there, but the tool still functions normally. */
+  function saveScenarios(list) {
+    try { localStorage.setItem(SCENARIO_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+
+  function currentSig() {
+    // canonical key for comparison ignoring order
+    const ids = [metals[state.a].id, metals[state.b].id].sort();
+    return ids.join('+') + '|' + state.env;
+  }
+
+  function saveCurrent() {
+    if (state.a === state.b) return;
+    const list = loadScenarios();
+    const sig  = currentSig();
+    if (list.some(s => s.sig === sig)) return; // already saved
+    if (list.length >= MAX_SCENARIOS) list.shift(); // FIFO
+    list.push({ a: metals[state.a].id, b: metals[state.b].id, env: state.env, sig: sig, savedAt: Date.now() });
+    saveScenarios(list);
+    renderTray();
+  }
+
+  function deleteScenario(sig) {
+    const list = loadScenarios().filter(s => s.sig !== sig);
+    saveScenarios(list);
+    renderTray();
+  }
+
+  function recallScenario(sc) {
+    const ai = metals.findIndex(m => m.id === sc.a);
+    const bi = metals.findIndex(m => m.id === sc.b);
+    if (ai >= 0) state.a = ai;
+    if (bi >= 0) state.b = bi;
+    if (ENVIRONMENTS[sc.env]) state.env = sc.env;
+    document.querySelectorAll('.env-btns button').forEach(b => b.classList.toggle('selected', b.dataset.env === state.env));
+    render(); writeUrl();
+  }
+
+  function renderTray() {
+    const tray = document.getElementById('tray');
+    const list = loadScenarios();
+    const curSig = currentSig();
+    tray.innerHTML = '';
+    for (let i = 0; i < MAX_SCENARIOS; i++) {
+      const sc = list[i];
+      if (!sc) {
+        const el = document.createElement('button');
+        el.className = 'scenario empty';
+        el.type = 'button';
+        el.textContent = 'Slot ' + (i + 1) + ' empty';
+        el.disabled = true;
+        tray.appendChild(el);
+        continue;
+      }
+      const ma = metals.find(m => m.id === sc.a);
+      const mb = metals.find(m => m.id === sc.b);
+      if (!ma || !mb) continue;
+      const diff = Math.abs(ma.potential - mb.potential);
+      const sevIdx = severityIndex(diff, sc.env);
+      const sev = SEVERITIES[sevIdx];
+      const dmv = Math.round(diff * 1000);
+      const sevColor = 'var(--c-' + sev.token + ')';
+      const envLabel = ENVIRONMENTS[sc.env].meta.split(' ·')[0];
+      const isActive = sc.sig === curSig;
+
+      const el = document.createElement('button');
+      el.className = 'scenario' + (isActive ? ' active' : '');
+      el.type = 'button';
+      el.innerHTML =
+        '<button class="sc-delete" type="button" aria-label="Delete scenario" data-sig="' + sc.sig + '">×</button>' +
+        '<div class="sc-top"><span>Scenario · ' + (i + 1) + '</span><span>' + envLabel + '</span></div>' +
+        '<div class="sc-pair">' + esc(ma.name) + '<span class="vs">×</span>' + esc(mb.name) + '</div>' +
+        '<div class="sc-bottom"><span class="sc-mv" style="color:' + sevColor + ';">' + dmv + ' mV</span><span class="sc-sev" style="color:' + sevColor + ';">' + sev.label + '</span></div>';
+      el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('sc-delete')) {
+          deleteScenario(sc.sig);
+          e.stopPropagation();
+          return;
+        }
+        recallScenario(sc);
+      });
+      tray.appendChild(el);
+    }
+    document.getElementById('tray-hint').textContent = list.length + ' of ' + MAX_SCENARIOS + ' saved · click to recall';
+  }
+
+  /* ──────────────────────────────────────────────────────────
+     TWEAKS PANEL — host protocol
+     ────────────────────────────────────────────────────────── */
+
+  function bindTweaksUI() {
+    document.querySelectorAll('.tweaks [data-key]').forEach(group => {
+      group.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-val]');
+        if (!btn) return;
+        setTweak(group.dataset.key, btn.dataset.val);
+      });
+    });
+    document.getElementById('tweaks-close').addEventListener('click', () => {
+      closeTweaks(true);
+    });
+  }
+
+  function openTweaks()  { document.getElementById('tweaks').classList.add('open'); document.getElementById('tweaks').setAttribute('aria-hidden','false'); }
+  function closeTweaks(notify) {
+    document.getElementById('tweaks').classList.remove('open');
+    document.getElementById('tweaks').setAttribute('aria-hidden','true');
+    if (notify) {
+      try { window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); } catch (e) {}
     }
   }
 
-  readUrl();
-  m1Sel.value = state.a;
-  m2Sel.value = state.b;
-  document.querySelectorAll('.env-btns button').forEach(btn => {
-    btn.classList.toggle('selected', btn.dataset.env === state.env);
+  window.addEventListener('message', (e) => {
+    const t = e.data && e.data.type;
+    if (t === '__activate_edit_mode')   openTweaks();
+    if (t === '__deactivate_edit_mode') closeTweaks(false);
   });
+  // announce availability AFTER listener is live
+  try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch (e) {}
 
-  /* Scale */
-  const POT_MIN = -1.70, POT_MAX = 0.15;
-  const SCALE_TOP = 56, SCALE_BOTTOM = 544;
-  const yFor = p => SCALE_TOP + ((p - POT_MIN) / (POT_MAX - POT_MIN)) * (SCALE_BOTTOM - SCALE_TOP);
+  /* ──────────────────────────────────────────────────────────
+     ENV + GLOBAL BUTTONS
+     ────────────────────────────────────────────────────────── */
 
-  function renderScale() {
-    const m1 = metals[state.a], m2 = metals[state.b];
-    const sev = SEVERITIES[severityIndex(m1.potential - m2.potential, state.env)];
-    const sevC  = 'var(--c-' + sev.token + ')';
-    const sevBg = 'var(--c-' + sev.token + '-bg)';
-
-    const headStyle = 'font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:1.4px;text-transform:uppercase;fill:var(--ink);';
-    const subStyle  = 'font-family:var(--font-mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;fill:var(--ink-3);';
-
-    let g = '';
-    g += '<text x="120" y="22"  text-anchor="middle" style="' + headStyle + '">Active</text>';
-    g += '<text x="120" y="38"  text-anchor="middle" style="' + subStyle  + '">corrodes</text>';
-    g += '<text x="120" y="568" text-anchor="middle" style="' + headStyle + '">Noble</text>';
-    g += '<text x="120" y="584" text-anchor="middle" style="' + subStyle  + '">protected</text>';
-
-    g += '<line x1="120" y1="44" x2="120" y2="556" style="stroke:var(--rule);stroke-width:1;"/>';
-    g += '<polygon points="115,47 125,47 120,40"   style="fill:var(--ink-3);"/>';
-    g += '<polygon points="115,553 125,553 120,560" style="fill:var(--ink-3);"/>';
-
-    metals.forEach((m, i) => {
-      const y = yFor(m.potential);
-      const sel = i === state.a || i === state.b;
-      const tickC  = sel ? sevC : 'var(--ink-3)';
-      const labelC = sel ? 'var(--ink)' : 'var(--ink-2)';
-      const w  = sel ? '500' : '400';
-      const sw = sel ? 2 : 1;
-      g += '<line x1="115" y1="' + y + '" x2="125" y2="' + y + '" style="stroke:' + tickC + ';stroke-width:' + sw + ';"/>';
-      g += '<text x="110" y="' + (y + 4) + '" text-anchor="end" style="font-family:var(--font-body);font-size:12px;font-weight:' + w + ';fill:' + labelC + ';">' + escapeHtml(m.name) + '</text>';
-      g += '<text x="130" y="' + (y + 4) + '" text-anchor="start" style="font-family:var(--font-mono);font-size:11px;fill:' + labelC + ';">' + fmtV(m.potential) + '</text>';
-    });
-
-    [m1, m2].forEach(m => {
-      const y = yFor(m.potential);
-      g += '<circle cx="120" cy="' + y + '" r="6" style="fill:' + sevC + ';stroke:var(--bg-card);stroke-width:2;"/>';
-    });
-
-    if (state.a !== state.b) {
-      const y1 = yFor(m1.potential), y2 = yFor(m2.potential);
-      const yt = Math.min(y1, y2), yb = Math.max(y1, y2);
-      const bx = 195;
-      g += '<line x1="' + bx + '" y1="' + yt + '" x2="' + bx + '" y2="' + yb + '" style="stroke:' + sevC + ';stroke-width:2;"/>';
-      g += '<line x1="' + (bx-4) + '" y1="' + yt + '" x2="' + (bx+4) + '" y2="' + yt + '" style="stroke:' + sevC + ';stroke-width:2;"/>';
-      g += '<line x1="' + (bx-4) + '" y1="' + yb + '" x2="' + (bx+4) + '" y2="' + yb + '" style="stroke:' + sevC + ';stroke-width:2;"/>';
-      const ym = (yt + yb) / 2;
-      const dmv = Math.round(Math.abs(m1.potential - m2.potential) * 1000);
-      g += '<rect x="' + (bx+8) + '" y="' + (ym-12) + '" width="68" height="24" rx="3" style="fill:' + sevBg + ';"/>';
-      g += '<text x="' + (bx+42) + '" y="' + (ym+4) + '" text-anchor="middle" style="font-family:var(--font-mono);font-size:11px;font-weight:500;fill:' + sevC + ';">' + dmv + ' mV</text>';
-    }
-
-    scaleSvg.innerHTML = g;
-  }
-
-  /* Update */
-  function update() {
-    const m1 = metals[state.a], m2 = metals[state.b];
-
-    if (state.a === state.b) {
-      resEl.innerHTML = '<p style="font-family:var(--font-display);font-style:italic;font-size:1.15rem;color:var(--ink-2);max-width:48ch;margin:0 auto;">Same metal selected — no galvanic reaction.</p>';
-      infoEl.innerHTML = '<div class="info-card"><div class="card-meta"><span class="card-num">01</span><span class="card-tag" style="color:var(--ink-3);">Note</span></div><h3>Self-pairing</h3><p>Identical metals at a junction have no electrochemical potential difference, so no galvanic cell forms. Pick two different metals to see how they interact.</p></div>';
-      renderScale();
-      writeUrl();
-      return;
-    }
-
-    const diff   = Math.abs(m1.potential - m2.potential);
-    const sevIdx = severityIndex(diff, state.env);
-    const sev    = SEVERITIES[sevIdx];
-    const anode   = m1.potential < m2.potential ? m1 : m2;
-    const cathode = m1.potential < m2.potential ? m2 : m1;
-    const dmv = Math.round(diff * 1000);
-    const sevBg = 'var(--c-' + sev.token + '-bg)';
-    const sevC  = 'var(--c-' + sev.token + ')';
-
-    resEl.innerHTML =
-      '<span class="result-pill" style="background:' + sevBg + ';color:' + sevC + ';">' + sev.label + ' reaction</span>' +
-      '<div class="result-num" style="color:' + sevC + ';">' + dmv + '<span class="unit">mV</span></div>' +
-      '<p class="result-desc">' + descFor(sevIdx, state.env) + '</p>';
-
-    infoEl.innerHTML =
-      '<div class="info-card">' +
-        '<div class="card-meta"><span class="card-num">01</span><span class="card-tag" style="color:var(--c-severe);">Anode — corrodes</span></div>' +
-        '<h3>' + escapeHtml(anode.name) + '</h3>' +
-        '<div class="metal-pot">' + fmtV(anode.potential) + ' V vs. SCE</div>' +
-        '<p>The more active metal at this junction. It loses electrons and dissolves into rainwater or condensate, producing pitting, white salts, or rust streaks on the building face.</p>' +
-      '</div>' +
-      '<div class="info-card">' +
-        '<div class="card-meta"><span class="card-num">02</span><span class="card-tag" style="color:var(--c-compat);">Cathode — protected</span></div>' +
-        '<h3>' + escapeHtml(cathode.name) + '</h3>' +
-        '<div class="metal-pot">' + fmtV(cathode.potential) + ' V vs. SCE</div>' +
-        '<p>The more noble metal. It accepts electrons and stays intact — actually shielded from corrosion at the anode\u2019s expense, the way galvanizing protects the steel beneath it.</p>' +
-      '</div>' +
-      '<div class="info-card">' +
-        '<div class="card-meta"><span class="card-num">03</span><span class="card-tag" style="color:var(--ink-2);">Detailing</span></div>' +
-        '<h3>How to build the joint</h3>' +
-        '<p>' + detailingText(sevIdx, state.env, anode) + '</p>' +
-      '</div>';
-
-    renderScale();
-    writeUrl();
-  }
-
-  /* Events */
-  m1Sel.addEventListener('change', () => { state.a = parseInt(m1Sel.value); update(); });
-  m2Sel.addEventListener('change', () => { state.b = parseInt(m2Sel.value); update(); });
   document.querySelectorAll('.env-btns button').forEach(btn => {
     btn.addEventListener('click', () => {
       state.env = btn.dataset.env;
       document.querySelectorAll('.env-btns button').forEach(b => b.classList.toggle('selected', b === btn));
-      update();
+      render(); writeUrl();
     });
   });
+  document.getElementById('save-btn').addEventListener('click', saveCurrent);
+  document.getElementById('swap-btn').addEventListener('click', () => {
+    const t = state.a; state.a = state.b; state.b = t;
+    render(); writeUrl();
+  });
 
-  update();
+  /* ──────────────────────────────────────────────────────────
+     INIT
+     ────────────────────────────────────────────────────────── */
+
+  readUrl();
+  document.querySelectorAll('.env-btns button').forEach(btn => btn.classList.toggle('selected', btn.dataset.env === state.env));
+  applyTweaks();   // builds scale + initial render
+  bindTweaksUI();
+
 })();
 </script>
-
 </body>
 </html>
